@@ -14,9 +14,8 @@ import "./interfaces/JugLike.sol";
 import "./interfaces/DogLike.sol";
 import "./interfaces/PipLike.sol";
 import "./interfaces/SpotLike.sol";
-import "./interfaces/IRewards.sol";
-import "./ceros/interfaces/IDavosProvider.sol";
-import "./ceros/interfaces/IInteraction.sol";
+import "./provider/interfaces/IDavosProvider.sol";
+import "./interfaces/IInteraction.sol";
 
 import "./libraries/AuctionProxy.sol";
 
@@ -43,7 +42,6 @@ contract Interaction is Initializable, IInteraction {
     DavosJoinLike public davosJoin;
     JugLike public jug;
     address public dog;
-    IRewards public dgtRewards;
 
     mapping(address => uint256) public deposits;
     mapping(address => CollateralType) public collaterals;
@@ -105,7 +103,6 @@ contract Interaction is Initializable, IInteraction {
         davosJoin = DavosJoinLike(davosJoin_);
         jug = JugLike(jug_);
         dog = dog_;
-        dgtRewards = IRewards(rewards_);
 
         vat.hope(davosJoin_);
 
@@ -227,7 +224,6 @@ contract Interaction is Initializable, IInteraction {
         require(davosAmount > 0,"Interaction/invalid-davosAmount");
 
         drip(token);
-        dropRewards(token, msg.sender);
 
         (, uint256 rate, , ,) = vat.ilks(collateralType.ilk);
         int256 dart = int256(davosAmount * RAY / rate);
@@ -243,10 +239,6 @@ contract Interaction is Initializable, IInteraction {
         uint256 liqPrice = liquidationPriceForDebt(collateralType.ilk, ink, art);
         emit Borrow(msg.sender, token, ink, davosAmount, liqPrice);
         return uint256(dart);
-    }
-
-    function dropRewards(address token, address usr) public {
-        dgtRewards.drop(token, usr);
     }
 
     // Burn user's DAVOS.
@@ -275,7 +267,6 @@ contract Interaction is Initializable, IInteraction {
         require(dart >= 0, "Interaction/too-much-requested");
 
         vat.frob(collateralType.ilk, msg.sender, msg.sender, msg.sender, 0, - dart);
-        dropRewards(token, msg.sender);
 
         drip(token);
 
@@ -332,11 +323,6 @@ contract Interaction is Initializable, IInteraction {
         _checkIsLive(collateralType.live);
 
         spotter.poke(collateralType.ilk);
-    }
-
-    function setRewards(address rewards) external auth {
-        dgtRewards = IRewards(rewards);
-        emit ChangeRewards(rewards);
     }
 
     //    /////////////////////////////////
@@ -524,7 +510,6 @@ contract Interaction is Initializable, IInteraction {
         address user,
         address keeper
     ) external returns (uint256) {
-        dropRewards(token, user);
         CollateralType memory collateral = collaterals[token];
         (uint256 ink,) = vat.urns(collateral.ilk, user);
         IDavosProvider provider = IDavosProvider(davosProviders[token]);
@@ -565,7 +550,6 @@ contract Interaction is Initializable, IInteraction {
         );
 
         address urn = ClipperLike(collateral.clip).sales(auctionId).usr; // Liquidated address
-        dropRewards(address(davos), urn);
 
         emit Liquidation(urn, token, collateralAmount, leftover);
     }

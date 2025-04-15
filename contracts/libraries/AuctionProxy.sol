@@ -8,10 +8,10 @@ import "../interfaces/GemJoinLike.sol";
 import "../interfaces/DavosJoinLike.sol";
 import "../interfaces/DogLike.sol";
 import "../interfaces/VatLike.sol";
-import "../ceros/interfaces/IDavosProvider.sol";
+import "../provider/interfaces/IDavosProvider.sol";
 import "../oracle/libraries/FullMath.sol";
 
-import { CollateralType } from  "../ceros/interfaces/IInteraction.sol";
+import { CollateralType } from  "../interfaces/IInteraction.sol";
 
 uint256 constant RAY = 10**27;
 

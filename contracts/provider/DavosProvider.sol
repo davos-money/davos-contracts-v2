@@ -11,8 +11,8 @@ import "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import "./interfaces/IDavosProvider.sol";
 
 import "./interfaces/ICertToken.sol";
-import "./interfaces/IInteraction.sol";
 import "./interfaces/IWrapped.sol";
+import "../interfaces/IInteraction.sol";
 
 interface IWAToken {
     function deposit(uint256 assets, address receiver) external returns (uint256);
