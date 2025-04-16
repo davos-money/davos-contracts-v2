@@ -40,10 +40,7 @@ describe('===DavosProvider===', function () {
 
         // Contract factory
         this.Token = await hre.ethers.getContractFactory("Token");
-        this.CeaMATICc = await hre.ethers.getContractFactory("CeToken");
-        this.CeVault = await hre.ethers.getContractFactory("CeVault");
         this.DCol = await hre.ethers.getContractFactory("dCol");
-        this.CerosRouter = await hre.ethers.getContractFactory("CerosRouterLs");
         this.DavosProvider = await hre.ethers.getContractFactory("DavosProvider");
         this.Vat = await hre.ethers.getContractFactory("Vat");
         this.Spot = await hre.ethers.getContractFactory("Spotter");
@@ -56,9 +53,6 @@ describe('===DavosProvider===', function () {
         this.Dog = await hre.ethers.getContractFactory("Dog");
         this.Clip = await hre.ethers.getContractFactory("Clipper");
         this.Abacus = await hre.ethers.getContractFactory("LinearDecrease");
-        this.DgtToken = await hre.ethers.getContractFactory("DGTToken");
-        this.DgtRewards = await hre.ethers.getContractFactory("DGTRewards");
-        this.DgtOracle = await hre.ethers.getContractFactory("DGTOracle"); 
         this.AuctionProxy = await hre.ethers.getContractFactory("AuctionProxy");
         this.RatioAdapter = await hre.ethers.getContractFactory("RatioAdapter");
 
@@ -71,19 +65,16 @@ describe('===DavosProvider===', function () {
             }
         });
 
-        this.MasterVault = await hre.ethers.getContractFactory("MasterVault_V2");
-        this.WaitingPool = await hre.ethers.getContractFactory("WaitingPool");
+        this.MasterVault = await hre.ethers.getContractFactory("MasterVault");
+        this.Licensor = await hre.ethers.getContractFactory("Licensor");
 
         // Contract deployment
         collateralToken = await this.Token.deploy()
         await collateralToken.deployed();
         await collateralToken.initialize("Matic Token", "MTK");
 
-        masterVault = await upgrades.deployProxy(this.MasterVault, ["MasterVault Token", "MVTK", 0, collateralToken.address]);
+        masterVault = await upgrades.deployProxy(this.MasterVault, ["MasterVault Token", "MVTK", collateralToken.address]);
         await masterVault.deployed();
-
-        waitingPool = await upgrades.deployProxy(this.WaitingPool, [masterVault.address, collateralToken.address, 10]);
-        await waitingPool.deployed();
 
         dCol = await upgrades.deployProxy(this.DCol, [], {initializer: "initialize"});
         await dCol.deployed();
@@ -133,11 +124,7 @@ describe('===DavosProvider===', function () {
         await clip.deployed();
         clipImp = await upgrades.erc1967.getImplementationAddress(dog.address);
 
-        rewards = await upgrades.deployProxy(this.DgtRewards, [vat.address, _dgtRewardsPoolLimitInEth + wad, 5], {initializer: "initialize"});
-        await rewards.deployed();
-        rewardsImp = await upgrades.erc1967.getImplementationAddress(rewards.address);
-
-        interaction = await upgrades.deployProxy(this.Interaction, [vat.address, spot.address, davos.address, davosJoin.address, jug.address, dog.address, rewards.address], 
+        interaction = await upgrades.deployProxy(this.Interaction, [vat.address, spot.address, davos.address, davosJoin.address, jug.address, dog.address], 
             {
                 initializer: "initialize",
                 unsafeAllowLinkedLibraries: true
@@ -150,6 +137,8 @@ describe('===DavosProvider===', function () {
         await davosProvider.deployed();
 
         ratioAdapter = await upgrades.deployProxy(this.RatioAdapter, [], {initializer: "initialize"});
+
+        licensor = await upgrades.deployProxy(this.Licensor, [deployer.address, 0, 0], {initializer: "initialize"});
 
         // initialize
         await vat.rely(gemJoin.address);
@@ -169,13 +158,12 @@ describe('===DavosProvider===', function () {
         await spot.rely(interaction.address);
         await spot["file(bytes32,bytes32,address)"](_ilkCeMatic, ethers.utils.formatBytes32String("pip"), oracle.address);
         await spot["file(bytes32,uint256)"](ethers.utils.formatBytes32String("par"), "1" + ray); // It means pegged to 1$
-        
-        await rewards.rely(interaction.address);
-        
+                
         await gemJoin.rely(interaction.address);
         await davosJoin.rely(interaction.address);
         await davosJoin.rely(vow.address);
-        
+        await davosJoin.rely(jug.address);
+
         await dog.rely(interaction.address);
         await dog.rely(clip.address);
         await dog["file(bytes32,address)"](ethers.utils.formatBytes32String("vow"), vow.address);
@@ -199,7 +187,9 @@ describe('===DavosProvider===', function () {
         
         await jug.rely(interaction.address);
         await jug["file(bytes32,address)"](ethers.utils.formatBytes32String("vow"), vow.address);
-        
+        await jug["file(bytes32,address)"](ethers.utils.formatBytes32String("licensor"), licensor.address);
+        await jug["file(bytes32,address)"](ethers.utils.formatBytes32String("davosJoin"), davosJoin.address);
+
         await vow.rely(dog.address);
         await vow["file(bytes32,address)"](ethers.utils.formatBytes32String("davos"), davos.address);
         
@@ -210,9 +200,7 @@ describe('===DavosProvider===', function () {
         await interaction.drip(masterVault.address);
         await interaction.setDavosProvider(masterVault.address, davosProvider.address);
 
-        await masterVault.changeProvider(davosProvider.address);
-        await masterVault.changeAdapter(ratioAdapter.address);
-        // await masterVault.setWaitingPool(waitingPool.address);
+        await masterVault.changeDavosProvider(davosProvider.address);
         await dCol.changeMinter(davosProvider.address);
     });
 
@@ -230,11 +218,8 @@ describe('===DavosProvider===', function () {
             await collateralToken.deployed();
             await collateralToken.initialize("Wrapped Matic", "wMATIC");
 
-            masterVault = await upgrades.deployProxy(this.MasterVault, ["MasterVault Token", "MVTK", 0, collateralToken.address]);
+            masterVault = await upgrades.deployProxy(this.MasterVault, ["MasterVault Token", "MVTK", collateralToken.address]);
             await masterVault.deployed();
-
-            waitingPool = await upgrades.deployProxy(this.WaitingPool, [masterVault.address, collateralToken.address, 10]);
-            await waitingPool.deployed();
 
             dCol = await upgrades.deployProxy(this.DCol, [], {initializer: "initialize"});
             await dCol.deployed();
@@ -284,11 +269,7 @@ describe('===DavosProvider===', function () {
             await clip.deployed();
             clipImp = await upgrades.erc1967.getImplementationAddress(dog.address);
 
-            rewards = await upgrades.deployProxy(this.DgtRewards, [vat.address, _dgtRewardsPoolLimitInEth + wad, 5], {initializer: "initialize"});
-            await rewards.deployed();
-            rewardsImp = await upgrades.erc1967.getImplementationAddress(rewards.address);
-
-            interaction = await upgrades.deployProxy(this.Interaction, [vat.address, spot.address, davos.address, davosJoin.address, jug.address, dog.address, rewards.address], 
+            interaction = await upgrades.deployProxy(this.Interaction, [vat.address, spot.address, davos.address, davosJoin.address, jug.address, dog.address], 
                 {
                     initializer: "initialize",
                     unsafeAllowLinkedLibraries: true
@@ -301,6 +282,8 @@ describe('===DavosProvider===', function () {
             await davosProvider.deployed();
 
             this.RatioAdapter = await hre.ethers.getContractFactory("RatioAdapter");
+            this.Licensor = await hre.ethers.getContractFactory("Licensor");
+            licensor = await upgrades.deployProxy(this.Licensor, [deployer.address, 0, 0], {initializer: "initialize"});
 
             // initialize
             await vat.rely(gemJoin.address);
@@ -320,9 +303,7 @@ describe('===DavosProvider===', function () {
             await spot.rely(interaction.address);
             await spot["file(bytes32,bytes32,address)"](_ilkCeMatic, ethers.utils.formatBytes32String("pip"), oracle.address);
             await spot["file(bytes32,uint256)"](ethers.utils.formatBytes32String("par"), "1" + ray); // It means pegged to 1$
-            
-            await rewards.rely(interaction.address);
-            
+                        
             await gemJoin.rely(interaction.address);
             await davosJoin.rely(interaction.address);
             await davosJoin.rely(vow.address);
@@ -350,7 +331,9 @@ describe('===DavosProvider===', function () {
             
             await jug.rely(interaction.address);
             await jug["file(bytes32,address)"](ethers.utils.formatBytes32String("vow"), vow.address);
-            
+            await jug["file(bytes32,address)"](ethers.utils.formatBytes32String("licensor"), licensor.address);
+            await jug["file(bytes32,address)"](ethers.utils.formatBytes32String("davosJoin"), davosJoin.address);
+
             await vow.rely(dog.address);
             await vow["file(bytes32,address)"](ethers.utils.formatBytes32String("davos"), davos.address);
             
@@ -361,9 +344,7 @@ describe('===DavosProvider===', function () {
             await interaction.drip(masterVault.address);
             await interaction.setDavosProvider(masterVault.address, davosProvider.address);
 
-            await masterVault.changeProvider(davosProvider.address);
-            await masterVault.changeAdapter(ratioAdapter.address);
-            // await masterVault.setWaitingPool(waitingPool.address);
+            await masterVault.changeDavosProvider(davosProvider.address);
             await dCol.changeMinter(davosProvider.address);
 
             await davosProvider.changeNativeStatus(true);

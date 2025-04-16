@@ -91,8 +91,7 @@ contract Interaction is Initializable, IInteraction {
         address davos_,
         address davosJoin_,
         address jug_,
-        address dog_,
-        address rewards_
+        address dog_
     ) external initializer {
 
         wards[msg.sender] = 1;

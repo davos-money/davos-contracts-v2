@@ -60,6 +60,9 @@ contract Flash is Initializable, ReentrancyGuardUpgradeable, IERC3156FlashLender
     
     // --- Init ---
     function initialize(address _vat, address _dusd, address _davosJoin, address _vow) external initializer {
+        
+        __ReentrancyGuard_init();
+
         wards[msg.sender] = 1;
         vat = VatLike(_vat);
         davosJoin = DavosJoinLike(_davosJoin);

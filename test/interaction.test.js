@@ -82,12 +82,8 @@ describe("Interaction", function () {
         _ilkCeMatic = ethers.utils.formatBytes32String("aMATICc");
 
         // Contracts Fetching
-        CeaMATICc = await ethers.getContractFactory("CeToken");
-        CeVault = await ethers.getContractFactory("CeVault");
-        AMATICb = await ethers.getContractFactory("aMATICb");
-        AMATICc = await ethers.getContractFactory("aMATICc");
+        AMATICc = await ethers.getContractFactory("Token");
         DCol = await ethers.getContractFactory("dCol");
-        CerosRouter = await ethers.getContractFactory("CerosRouterLs");
         DavosProvider = await ethers.getContractFactory("DavosProvider");
         Vat = await ethers.getContractFactory("Vat");
         Spot = await ethers.getContractFactory("Spotter");
@@ -100,9 +96,6 @@ describe("Interaction", function () {
         Dog = await ethers.getContractFactory("Dog");
         Clip = await ethers.getContractFactory("Clipper");
         Abacus = await ethers.getContractFactory("LinearDecrease");
-        DgtToken = await ethers.getContractFactory("DGTToken");
-        DgtRewards = await ethers.getContractFactory("DGTRewards");
-        DgtOracle = await ethers.getContractFactory("DGTOracle"); 
         AuctionProxy = await ethers.getContractFactory("AuctionProxy");
 
         const auctionProxy = await this.AuctionProxy.deploy();
@@ -162,11 +155,7 @@ describe("Interaction", function () {
         await clip.deployed();
         clipImp = await upgrades.erc1967.getImplementationAddress(dog.address);
 
-        rewards = await upgrades.deployProxy(this.DgtRewards, [vat.address, ether(_dgtRewardsPoolLimitInEth).toString(), 5], {initializer: "initialize"});
-        await rewards.deployed();
-        rewardsImp = await upgrades.erc1967.getImplementationAddress(rewards.address);
-
-        interaction = await upgrades.deployProxy(this.Interaction, [vat.address, spot.address, davos.address, davosJoin.address, jug.address, dog.address, rewards.address], 
+        interaction = await upgrades.deployProxy(this.Interaction, [vat.address, spot.address, davos.address, davosJoin.address, jug.address, dog.address], 
             {
                 initializer: "initialize",
                 unsafeAllowLinkedLibraries: true,
@@ -174,6 +163,9 @@ describe("Interaction", function () {
         );
         await interaction.deployed();
         interactionImplAddress = await upgrades.erc1967.getImplementationAddress(interaction.address);
+
+        licensor = await hre.ethers.getContractFactory("Licensor");
+        licensor = await upgrades.deployProxy(licensor, [deployer.address, 0, 0], {initializer: "initialize"});
 
         davosProvider = await upgrades.deployProxy(this.DavosProvider, [collateralToken.address, dCol.address, collateralToken.address, interaction.address, false], {initializer: "initialize"});
         await davosProvider.deployed();
@@ -196,9 +188,7 @@ describe("Interaction", function () {
         await spot.rely(interaction.address);
         await spot["file(bytes32,bytes32,address)"](_ilkCeMatic, ethers.utils.formatBytes32String("pip"), oracle.address);
         await spot["file(bytes32,uint256)"](ethers.utils.formatBytes32String("par"), _spot_par + ray); // It means pegged to 1$
-        
-        await rewards.rely(interaction.address);
-        
+
         await gemJoin.rely(interaction.address);
         await davosJoin.rely(interaction.address);
         await davosJoin.rely(vow.address);
@@ -226,7 +216,9 @@ describe("Interaction", function () {
         
         await jug.rely(interaction.address);
         await jug["file(bytes32,address)"](ethers.utils.formatBytes32String("vow"), vow.address);
-        
+        await jug["file(bytes32,address)"](ethers.utils.formatBytes32String("licensor"), licensor.address);
+        await jug["file(bytes32,address)"](ethers.utils.formatBytes32String("davosJoin"), davosJoin.address);
+
         await vow.rely(dog.address);
         await vow["file(bytes32,address)"](ethers.utils.formatBytes32String("davos"), davos.address);
         
@@ -949,18 +941,6 @@ describe("Interaction", function () {
             ).to.be.revertedWith("Interaction/token-already-init");
         });
 
-        it("setRewards(): only authorized account can set core contracts", async function () {
-            await expect(
-                interaction
-                .connect(signer1)
-                .setRewards(rewards.address)
-            ).to.be.revertedWith("Interaction/not-authorized");
-        });
-
-        it("setRewards(): should let authorized account set core contracts", async function () {
-            await interaction.setRewards(signer1.address);
-            assert.equal((await interaction.dgtRewards()), signer1.address);
-        });
         it("rely()/deny(): should rely and deny on an address", async function () {
             await interaction.rely(signer2.address);
             expect(await interaction.wards(signer2.address)).to.be.equal(1);

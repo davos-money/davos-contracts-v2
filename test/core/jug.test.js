@@ -20,7 +20,8 @@ describe('===Jug===', function () {
         this.Jug = await ethers.getContractFactory("Jug");
         this.Vat = await ethers.getContractFactory("Vat");
         this.ProxyLike = await ethers.getContractFactory("ProxyLike");
-
+        this.Licensor = await hre.ethers.getContractFactory("Licensor");
+        
         // Contract deployment
         vat = await upgrades.deployProxy(this.Vat, [], {initializer: "initialize"});
         await vat.deployed();
@@ -28,6 +29,7 @@ describe('===Jug===', function () {
         await jug.deployed();
         proxyLike = await this.ProxyLike.connect(deployer).deploy(jug.address, vat.address);
         await proxyLike.deployed();
+        licensor = await upgrades.deployProxy(this.Licensor, [deployer.address, 0, 0], {initializer: "initialize"});
     });
 
     describe('--- initialize()', function () {
@@ -104,6 +106,7 @@ describe('===Jug===', function () {
         it('drips a rate', async function () {
             await jug.connect(deployer)["file(bytes32,uint256)"](ethers.utils.formatBytes32String("base"), "1" + ray);
             await jug.connect(deployer)["file(bytes32,address)"](ethers.utils.formatBytes32String("vow"), signer2.address);
+            await jug["file(bytes32,address)"](ethers.utils.formatBytes32String("licensor"), licensor.address);
 
             await vat.rely(jug.address);
             

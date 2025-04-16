@@ -27,9 +27,9 @@ contract YieldModule is ModuleBase, IYieldModule {
     constructor() { _disableInitializers(); }
 
     // --- Init ---
-    function initialize(uint256 _yieldMargin) external initializer {
+    function initialize(address _licensor, uint256 _yieldMargin) external initializer {
 
-        __ModuleBase_init();
+        __ModuleBase_init(_licensor);
 
         require(_yieldMargin <= 1e4, MoreThanMax());
         yieldMargin = _yieldMargin;

@@ -109,7 +109,11 @@ contract Jug is Initializable, JugLike {
     }
     function file(bytes32 what, address data) external auth {
         if (what == "vow") vow = data;
-        else if (what == "davosJoin") davosJoin = data;
+        else if (what == "davosJoin") {
+            vat.nope(davosJoin);
+            davosJoin = data;
+            vat.hope(data);
+        }
         else if (what == "licensor") licensor = data;
         else revert("Jug/file-unrecognized-param");
         emit File(what, data);
@@ -138,7 +142,9 @@ contract Jug is Initializable, JugLike {
             uint256 royalty = y * royaltyMargin / maxMargin;
 
             vat.move(address(this), vow, y - royalty);
-            DavosJoinLike(davosJoin).exit(licensor, royalty / 1e27);
+
+            royalty = royalty / 1e27;
+            if (royalty > 0) DavosJoinLike(davosJoin).exit(licensor, royalty / 1e27);
         }
 
         ilks[ilk].rho = block.timestamp;

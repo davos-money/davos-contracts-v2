@@ -26,11 +26,13 @@ abstract contract ModuleBase is ReentrancyGuardUpgradeable, PausableUpgradeable,
     constructor() { _disableInitializers(); }
 
     // --- Init ---
-    function __ModuleBase_init() internal onlyInitializing {
+    function __ModuleBase_init(address _licensor) internal onlyInitializing {
 
         __Ownable_init(_msgSender());
         __Pausable_init();
         __ReentrancyGuard_init();
+
+        licensor = _licensor;
     }
 
     function asset() external view virtual returns (address);
