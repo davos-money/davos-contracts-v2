@@ -22,9 +22,6 @@ abstract contract PluginBase is ReentrancyGuardUpgradeable, PausableUpgradeable,
         __ReentrancyGuard_init();
     }
 
-    function beforeClaim() external virtual returns (uint256);
-    function afterClaim() external virtual returns (uint256);
-
     // --- Admin ---
     function pause() external onlyOwner {
 

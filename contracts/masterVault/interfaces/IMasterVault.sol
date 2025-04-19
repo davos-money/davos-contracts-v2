@@ -4,9 +4,9 @@ pragma solidity ^0.8.29;
 interface IMasterVault {
 
     // --- Events ---
-    event DavosProviderChanged(address _oldProvider, address _newProvider);
-    event ModuleAdded(address _module, bytes _context);
-    event ContextChanged(address _module, bytes _oldContext, bytes _newContext);
+    event DavosProviderChanged(address indexed _oldProvider, address indexed _newProvider);
+    event ModuleAdded(address indexed _module, bytes _context);
+    event ContextChanged(address indexed _module, bytes _oldContext, bytes _newContext);
 
     // --- Errors ---
     error NotOwnerOrProvider();

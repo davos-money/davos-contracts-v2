@@ -8,6 +8,6 @@ interface IPluginBase {
     // --- Errors ---
 
     // --- Functions ---
-    function beforeClaim() external returns (uint256);
-    function afterClaim() external returns (uint256);
+    function beforeHook() external returns (uint256);
+    function afterHook() external returns (uint256);
 }

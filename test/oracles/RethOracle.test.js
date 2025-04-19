@@ -5,7 +5,7 @@ const {BigNumber} = require("ethers");
 describe('RethOracle', function () {
     let deployer, signer1, signer2;
 
-    let oracle, mVault, token, aggregator1, aggregator2;
+    let oracle, mVault, token, aggregator1, aggregator2, yieldModule;
 
     const NULL_ADDRESS = '0x0000000000000000000000000000000000000000';
     const R_ETH_PRICE = '100000000000';
@@ -19,8 +19,10 @@ describe('RethOracle', function () {
         this.RethOracle = await ethers.getContractFactory("RethOracle");
         this.AggregatorV3 = await ethers.getContractFactory("MockAggregator");
         this.Token = await ethers.getContractFactory("Token");
-        this.MasterVaultV2 = await ethers.getContractFactory("MasterVault_V2");
-        this.RatioAdapter = await ethers.getContractFactory("RatioAdapter");
+        this.MasterVaultV2 = await ethers.getContractFactory("MasterVault");
+        this.PriceController = await ethers.getContractFactory("PriceController");
+        this.Licensor = await ethers.getContractFactory("Licensor");
+        this.YieldModule = await ethers.getContractFactory("YieldModule");
 
         aggregator1 = await this.AggregatorV3.deploy('100000000'); // price is equal
         await aggregator1.deployed();
@@ -29,18 +31,23 @@ describe('RethOracle', function () {
 
         token = await upgrades.deployProxy(this.Token, ["Wrapped Staked Ether", "rETH"], {initializer: "initialize"});
         await token.deployed();
-        mVault = await upgrades.deployProxy(this.MasterVaultV2, ["Master Vault Token", "ceETH", 1000, token.address], {initializer: "initialize"});
+        mVault = await upgrades.deployProxy(this.MasterVaultV2, ["Master Vault Token", "ceETH", token.address], {initializer: "initialize"});
         await mVault.deployed();
-        await mVault.changeYieldHeritor(deployer.address);
+        // await mVault.changeYieldHeritor(deployer.address);
 
-        const adapter = await upgrades.deployProxy(this.RatioAdapter, [], {initializer: "initialize"});
-        await adapter.deployed();
-        await adapter.setToken(token.address, 'getRethValue(uint256)', 'getEthValue(uint256)', '', false);
-        await mVault.changeAdapter(adapter.address);
+        const pc = await upgrades.deployProxy(this.PriceController, [], {initializer: "initialize"});
+        await pc.deployed();
+        await pc.setToken(token.address, 'getRethValue(uint256)', 'getEthValue(uint256)', '', false);
 
         oracle = await upgrades.deployProxy(this.RethOracle, [aggregator1.address, aggregator2.address, mVault.address], {initializer: "initialize"});
         await oracle.deployed();
 
+        licensor = await upgrades.deployProxy(this.Licensor, [deployer.address, 0, 0], {initializer: "initialize"});
+
+        yieldModule = await upgrades.deployProxy(this.YieldModule, [mVault.address, licensor.address, 1000], {initializer: "initialize"});
+        await yieldModule.changePriceController(pc.address);
+
+        await mVault.addModule(yieldModule.address, "0x");
     });
 
     describe('general', function () {
@@ -60,7 +67,7 @@ describe('RethOracle', function () {
           const amount = ethers.utils.parseEther('1');
           await token.setRatio("1000000000000000000");
 
-          await mVault.changeProvider(signer1.address);
+          await mVault.changeDavosProvider(signer1.address);
           await token.mint(signer1.address, ethers.utils.parseEther('10'));
           await token.connect(signer1).approve(mVault.address, ethers.utils.parseEther('10'));
           await mVault.connect(signer1).deposit(amount, signer1.address);
@@ -78,7 +85,7 @@ describe('RethOracle', function () {
           peek = await oracle.peek();
           expect(BigNumber.from(peek[0]).toString()).to.be.eq('1900000000000000000000'); // 1900.000000000000000000 USD
 
-          await mVault.claimYield();
+          await yieldModule.claimYield();
           peek = await oracle.peek();
           expect(BigNumber.from(peek[0]).toString()).to.be.eq('1900000000000000000000'); // 1900.000000000000000000 USD
 

@@ -39,14 +39,15 @@ contract SwapBurn is PluginBase {
         vow = _vow;
     }
 
-    function beforeClaim() external override returns (uint256) {
+    function beforeHook() external override returns (uint256) {
 
     }
-    function afterClaim() external override nonReentrant whenNotPaused returns (uint256) {
+    function afterHook() external override nonReentrant whenNotPaused returns (uint256) {
 
-        IERC20 asset = IERC20(IModuleBase(msg.sender).asset());
-        uint256 balance = asset.balanceOf(msg.sender);
-        asset.safeTransferFrom(msg.sender, address(this), balance);
+        IERC20 asset = IERC20(IModuleBase(_msgSender()).asset());
+        uint256 balance = asset.balanceOf(_msgSender());
+
+        asset.safeTransferFrom(_msgSender(), address(this), balance);
 
         swap(balance);
         feed(balance);
@@ -57,10 +58,10 @@ contract SwapBurn is PluginBase {
 
         require(amountIn > 0, "AmountIn = 0");
 
-        IERC20 asset = IERC20(IModuleBase(msg.sender).asset());
+        IERC20 asset = IERC20(IModuleBase(_msgSender()).asset());
         asset.safeIncreaseAllowance(address(router), amountIn);
 
-        address tokenIn = address(IModuleBase(msg.sender).asset());
+        address tokenIn = address(IModuleBase(_msgSender()).asset());
 
         IERC20(tokenIn).approve(address(router), amountIn);
 
@@ -87,7 +88,7 @@ contract SwapBurn is PluginBase {
             tokenIn: tokenIn,
             tokenOut: tokenOut,
             fee: 1000,
-            recipient: msg.sender,
+            recipient: _msgSender(),
             deadline: block.timestamp,
             amountIn: amountIn,
             amountOutMinimum: minOut,

@@ -8,7 +8,6 @@ import { ERC4626Upgradeable         } from "@openzeppelin/contracts-upgradeable/
 import { IMasterVault               } from "./interfaces/IMasterVault.sol";
 
 import { IERC20         } from "@openzeppelin/contracts/interfaces/IERC20.sol";
-import { IERC20Metadata } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
 import { IModuleBase    } from  "./modules/interfaces/IModuleBase.sol";
 
 // --- MasterVault ---
@@ -36,11 +35,11 @@ contract MasterVault is ReentrancyGuardUpgradeable, PausableUpgradeable, Ownable
     // --- Init ---
     function initialize(string memory _name, string memory _symbol, address _asset) external initializer {
 
-        __ERC4626_init(IERC20Metadata(_asset));
-        __ERC20_init(_name, _symbol);
-        __Ownable_init(_msgSender());
-        __Pausable_init();
         __ReentrancyGuard_init();
+        __Pausable_init();
+        __Ownable_init(_msgSender());
+        __ERC20_init(_name, _symbol);
+        __ERC4626_init(IERC20(_asset));
     }
 
     // --- Provider ---
@@ -147,6 +146,8 @@ contract MasterVault is ReentrancyGuardUpgradeable, PausableUpgradeable, Ownable
         require(_module != address(0), ZeroAddress());
         modules.push(IModuleBase(_module));
         contexts[_module] = _context;
+
+        IModuleBase(_module).setup();
         IERC20(asset()).approve(_module, type(uint256).max);
 
         emit ModuleAdded(_module, _context);

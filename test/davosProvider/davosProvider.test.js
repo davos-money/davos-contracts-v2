@@ -54,7 +54,7 @@ describe('===DavosProvider===', function () {
         this.Clip = await hre.ethers.getContractFactory("Clipper");
         this.Abacus = await hre.ethers.getContractFactory("LinearDecrease");
         this.AuctionProxy = await hre.ethers.getContractFactory("AuctionProxy");
-        this.RatioAdapter = await hre.ethers.getContractFactory("RatioAdapter");
+        this.PriceController = await hre.ethers.getContractFactory("PriceController");
 
         const auctionProxy = await this.AuctionProxy.deploy();
         await auctionProxy.deployed();
@@ -136,7 +136,7 @@ describe('===DavosProvider===', function () {
         davosProvider = await upgrades.deployProxy(this.DavosProvider, [collateralToken.address, dCol.address, masterVault.address, interaction.address, false], {initializer: "initialize"});
         await davosProvider.deployed();
 
-        ratioAdapter = await upgrades.deployProxy(this.RatioAdapter, [], {initializer: "initialize"});
+        priceController = await upgrades.deployProxy(this.PriceController, [], {initializer: "initialize"});
 
         licensor = await upgrades.deployProxy(this.Licensor, [deployer.address, 0, 0], {initializer: "initialize"});
 
@@ -281,7 +281,7 @@ describe('===DavosProvider===', function () {
             davosProvider = await upgrades.deployProxy(this.DavosProvider, [collateralToken.address, dCol.address, masterVault.address, interaction.address, true], {initializer: "initialize"});
             await davosProvider.deployed();
 
-            this.RatioAdapter = await hre.ethers.getContractFactory("RatioAdapter");
+            this.PriceController = await hre.ethers.getContractFactory("PriceController");
             this.Licensor = await hre.ethers.getContractFactory("Licensor");
             licensor = await upgrades.deployProxy(this.Licensor, [deployer.address, 0, 0], {initializer: "initialize"});
 

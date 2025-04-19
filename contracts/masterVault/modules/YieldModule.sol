@@ -4,12 +4,12 @@ pragma solidity ^0.8.29;
 import { ModuleBase   } from  "./ModuleBase.sol";
 import { IYieldModule } from  "./interfaces/IYieldModule.sol";
 
-import { IERC20        } from "@openzeppelin/contracts/interfaces/IERC20.sol";
-import { IERC4626      } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
-import { SafeERC20     } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { IRatioAdapter } from "../interfaces/IRatioAdapter.sol";
-import { IPluginBase   } from "../plugins/interfaces/IPluginBase.sol";
-import { ILicensor     } from "../interfaces/ILicensor.sol";
+import { IERC20           } from "@openzeppelin/contracts/interfaces/IERC20.sol";
+import { IERC4626         } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
+import { SafeERC20        } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IPriceController } from "../interfaces/IPriceController.sol";
+import { IPluginBase      } from "../plugins/interfaces/IPluginBase.sol";
+import { ILicensor        } from "../interfaces/ILicensor.sol";
 
 // --- YieldModule ---
 // --- Enables tracking and collection of yield from MasterVault ---
@@ -20,16 +20,16 @@ contract YieldModule is ModuleBase, IYieldModule {
     // --- Vars ---
     uint256 public yieldMargin;        // Percentage of Yield protocol gets, 10,000 = 100%
     uint256 public yieldBalance;
-    IRatioAdapter public ratioAdapter;
+    IPriceController public priceController;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     // --- Constructor ---
     constructor() { _disableInitializers(); }
 
     // --- Init ---
-    function initialize(address _licensor, uint256 _yieldMargin) external initializer {
+    function initialize(address _masterVault, address _licensor, uint256 _yieldMargin) external initializer {
 
-        __ModuleBase_init(_licensor);
+        __ModuleBase_init(_masterVault, _licensor);
 
         require(_yieldMargin <= 1e4, MoreThanMax());
         yieldMargin = _yieldMargin;
@@ -37,9 +37,11 @@ contract YieldModule is ModuleBase, IYieldModule {
         emit YieldMarginSet(0, _yieldMargin);
     }
 
+    // --- Public ---
     function claimYield() external nonReentrant whenNotPaused returns (uint256 yield) {
 
         yield = _claimYield();
+        _updateYieldBalance();
     }
     function _claimYield() internal returns (uint256) {
 
@@ -62,13 +64,13 @@ contract YieldModule is ModuleBase, IYieldModule {
     }
     function _beforeClaim() internal {
 
-        IPluginBase(plugin).beforeClaim();
-    }
+        plugin.call(abi.encodeWithSelector(IPluginBase.beforeHook.selector));
+     }
     function _afterClaim() internal {
 
-        IPluginBase(plugin).afterClaim();
+        plugin.call(abi.encodeWithSelector(IPluginBase.afterHook.selector));
     }
-    function updateYieldBalance() internal {
+    function _updateYieldBalance() internal {
 
         yieldBalance = expandUnderlyings();
     }
@@ -82,21 +84,13 @@ contract YieldModule is ModuleBase, IYieldModule {
 
         emit YieldMarginSet(oldMargin, _newMargin);
     }
-    function changeAdapter(address _newAdapter) external onlyOwner {
+    function changePriceController(address _newController) external onlyOwner {
 
-        require(_newAdapter != address(0), ZeroAddress());
-        address oldAdatper = address(ratioAdapter);
-        ratioAdapter = IRatioAdapter(_newAdapter);
+        require(_newController != address(0), ZeroAddress());
+        address oldAdatper = address(priceController);
+        priceController = IPriceController(_newController);
 
-        emit RatioAdapterChanged(oldAdatper, _newAdapter);
-    }
-    function changePlugin(address _newPlugin) external onlyOwner {
-
-        require(_newPlugin != address(0), ZeroAddress());
-        address oldPlugin = plugin;
-        plugin = _newPlugin;
-
-        emit PluginChanged(oldPlugin, _newPlugin);
+        emit PriceControllerChanged(oldAdatper, _newController);
     }
 
     // --- Views ---
@@ -109,7 +103,7 @@ contract YieldModule is ModuleBase, IYieldModule {
 
         uint256 yield = diffBalance * yieldMargin / 1e4;
 
-        return ratioAdapter.fromValue(asset(), yield);
+        return priceController.convertToShares(asset(), yield);
     }
     function getYieldRoyalty(uint256 yield) public view returns (uint256) {
 
@@ -120,14 +114,19 @@ contract YieldModule is ModuleBase, IYieldModule {
     }
     function expandUnderlyings() public view returns (uint256) {
 
-        return ratioAdapter.toValue(asset(), IERC20(asset()).balanceOf(address(masterVault)));
-    }
-    function asset() public view override returns (address) {
-
-        IERC4626(masterVault).asset();
+        return priceController.convertToAssets(asset(), IERC20(asset()).balanceOf(masterVault));
     }
 
     // --- ModuleBase ---
+    function asset() public view override returns (address) {
+
+        return IERC4626(masterVault).asset();
+    }
+    function setup() external override virtual onlyOwnerOrVault {
+        
+        yieldBalance = expandUnderlyings();
+    }
+
     function beforeDeposit(bytes memory _data, bytes memory _context) external {
 
         _claimYield();
@@ -147,19 +146,19 @@ contract YieldModule is ModuleBase, IYieldModule {
 
     function afterDeposit(bytes memory _data, bytes memory _context) external {
 
-        updateYieldBalance();
+        _updateYieldBalance();
     }
     function afterRedeem(bytes memory _data, bytes memory _context) external {
 
-        updateYieldBalance();
+        _updateYieldBalance();
     }
     function afterMint(bytes memory _data, bytes memory _context) external {
 
-        updateYieldBalance();
+        _updateYieldBalance();
     }
     function afterWithdraw(bytes memory _data, bytes memory _context) external {
 
-        updateYieldBalance();
+        _updateYieldBalance();
     }
 
     function previewTotalAssets(uint256 _underlyings) external view override returns (uint256 _actualAssets) {

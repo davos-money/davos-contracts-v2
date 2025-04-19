@@ -5,8 +5,8 @@ import "./extensions/CrossRateLstOracle.sol";
 
 contract AnkrBNBOracle is CrossRateLstOracle {
 
-    function initialize(AggregatorV3Interface _aggregatorAddress, address _ankrBNB, IMasterVault _masterVault, IRatioAdapter _ratioAdapter) external initializer {
+    function initialize(AggregatorV3Interface _aggregatorAddress, address _ankrBNB, IMasterVault _masterVault, IPriceController _priceController) external initializer {
         __LstOracle__init(_masterVault);
-        __CrossRateLstOracle__init(_aggregatorAddress, _ankrBNB, _ratioAdapter);
+        __CrossRateLstOracle__init(_aggregatorAddress, _ankrBNB, _priceController);
     }
 }

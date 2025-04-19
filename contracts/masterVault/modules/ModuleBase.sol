@@ -26,22 +26,31 @@ abstract contract ModuleBase is ReentrancyGuardUpgradeable, PausableUpgradeable,
     constructor() { _disableInitializers(); }
 
     // --- Init ---
-    function __ModuleBase_init(address _licensor) internal onlyInitializing {
+    function __ModuleBase_init(address _masterVault, address _licensor) internal onlyInitializing {
 
-        __Ownable_init(_msgSender());
-        __Pausable_init();
         __ReentrancyGuard_init();
+        __Pausable_init();
+        __Ownable_init(_msgSender());
 
         licensor = _licensor;
+        masterVault = _masterVault;
     }
 
-    function asset() external view virtual returns (address);
+    // --- Views ---
     function previewTotalAssets(uint256 assets) external view virtual returns (uint256) {
 
         return assets;
     }
 
     // --- Admin ---
+    function changePlugin(address _newPlugin) external onlyOwner {
+
+        require(_newPlugin != address(0), ZeroAddress());
+        address oldPlugin = plugin;
+        plugin = _newPlugin;
+
+        emit PluginChanged(oldPlugin, _newPlugin);
+    }
     function pause() external onlyOwner {
 
         _pause();

@@ -9,9 +9,9 @@ interface IMasterVault {
     function previewRedeem(uint256 shares) external view returns (uint256);
     function decimals() external view returns (uint256);
 }
-interface IRatioAdapter {
-    function fromValue(address token, uint256 amount) external view returns (uint256);
-    function toValue(address token, uint256 amount) external view returns (uint256);
+interface IPriceController {
+    function convertToShares(address token, uint256 amount) external view returns (uint256);
+    function convertToAssets(address token, uint256 amount) external view returns (uint256);
 }
 
 // Abstract contract as base for any liquid staking master vault

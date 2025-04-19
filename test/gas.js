@@ -46,7 +46,7 @@ describe('===Gas Calculation===', function () {
             this.GemJoin = await ethers.getContractFactory("GemJoin");
             this.Clip = await ethers.getContractFactory("Clipper");
 
-            this.RatioAdapter = await ethers.getContractFactory("RatioAdapter");
+            this.PriceController = await ethers.getContractFactory("PriceController");
             
             this.Oracle = await ethers.getContractFactory("AnkrBNBOracle");
 
@@ -178,7 +178,7 @@ describe('===Gas Calculation===', function () {
             let dColImp = await this.DCol.deploy();
             let gemJoinImp = await this.GemJoin.deploy();
             let clipImp = await this.Clip.deploy();
-            let ratioAdapterImp = await this.RatioAdapter.deploy();
+            let priceControllerImp = await this.PriceController.deploy();
             let oracleImp = await this.Oracle.deploy();
             let wATokenImp = await this.WAToken.deploy();
 
@@ -187,7 +187,7 @@ describe('===Gas Calculation===', function () {
             total += Number(dColImp.deployTransaction.gasLimit);
             total += Number(gemJoinImp.deployTransaction.gasLimit);
             total += Number(clipImp.deployTransaction.gasLimit);
-            total += Number(ratioAdapterImp.deployTransaction.gasLimit);
+            total += Number(priceControllerImp.deployTransaction.gasLimit);
             total += Number(oracleImp.deployTransaction.gasLimit);
             total += Number(wATokenImp.deployTransaction.gasLimit);
 
@@ -196,7 +196,7 @@ describe('===Gas Calculation===', function () {
             console.log("DCol--------------------------------" + dColImp.deployTransaction.gasLimit)
             console.log("GemJoin-----------------------------" + gemJoinImp.deployTransaction.gasLimit)
             console.log("Clipper-----------------------------" + clipImp.deployTransaction.gasLimit)
-            console.log("RatioAdapter------------------------" + ratioAdapterImp.deployTransaction.gasLimit)
+            console.log("PriceController------------------------" + priceControllerImp.deployTransaction.gasLimit)
             console.log("Oracle------------------------------" + oracleImp.deployTransaction.gasLimit)
             console.log("Wrapper-----------------------------" + wATokenImp.deployTransaction.gasLimit)
             console.log("TOTAL-------------------------------" + total);
@@ -213,7 +213,7 @@ describe('===Gas Calculation===', function () {
             let dCol = await this.TUP.deploy(dColImp.address, proxyAdmin.address, "0x");
             let gemJoin = await this.TUP.deploy(gemJoinImp.address, proxyAdmin.address, "0x");
             let clip = await this.TUP.deploy(clipImp.address, proxyAdmin.address, "0x");
-            let ratioAdapter = await this.TUP.deploy(ratioAdapterImp.address, proxyAdmin.address, "0x");
+            let priceController = await this.TUP.deploy(priceControllerImp.address, proxyAdmin.address, "0x");
             let oracle = await this.TUP.deploy(oracleImp.address, proxyAdmin.address, "0x");
             let wAToken = await this.TUP.deploy(wATokenImp.address, proxyAdmin.address, "0x");
 
@@ -226,7 +226,7 @@ describe('===Gas Calculation===', function () {
             dCol = await ethers.getContractAt("dCol", dCol.address);
             gemJoin = await ethers.getContractAt("GemJoin", gemJoin.address);
             clip = await ethers.getContractAt("Clipper", clip.address);
-            ratioAdapter = await ethers.getContractAt("RatioAdapter", ratioAdapter.address);
+            priceController = await ethers.getContractAt("PriceController", priceController.address);
             oracle = await ethers.getContractAt("AnkrBNBOracle", oracle.address);
             wAToken = await ethers.getContractAt("WAToken", wAToken.address);
 
@@ -239,11 +239,11 @@ describe('===Gas Calculation===', function () {
             receipt = await (await dCol.initialize()).wait(); total += Number(receipt.cumulativeGasUsed);
             receipt = await (await gemJoin.initialize(vat.address, _ilk, masterVault.address)).wait(); total += Number(receipt.cumulativeGasUsed);
             receipt = await (await clip.initialize(vat.address, spot.address, dog.address, _ilk)).wait(); total += Number(receipt.cumulativeGasUsed);
-            receipt = await (await ratioAdapter.initialize()).wait(); total += Number(receipt.cumulativeGasUsed);
-            receipt = await (await oracle.initialize("0x73AB44615772a0d31dB48A87d7F4F81a3601BceB", wAToken.address, masterVault.address, ratioAdapter.address)).wait(); total += Number(receipt.cumulativeGasUsed);
+            receipt = await (await priceController.initialize()).wait(); total += Number(receipt.cumulativeGasUsed);
+            receipt = await (await oracle.initialize("0x73AB44615772a0d31dB48A87d7F4F81a3601BceB", wAToken.address, masterVault.address, priceController.address)).wait(); total += Number(receipt.cumulativeGasUsed);
             receipt = await (await wAToken.initialize("abc", "ABC", _underlying)).wait(); total += Number(receipt.cumulativeGasUsed);
 
-            await ( await ratioAdapter.setToken(wAToken.address, "convertToAssets(uint256)", "convertToShares(uint256)", "", false)).wait(); total += Number(receipt.cumulativeGasUsed); 
+            await ( await priceController.setToken(wAToken.address, "convertToAssets(uint256)", "convertToShares(uint256)", "", false)).wait(); total += Number(receipt.cumulativeGasUsed); 
 
             await ( await masterVault.changeDavosProvider(davosProvider.address)).wait(); total += Number(receipt.cumulativeGasUsed); 
 
@@ -291,7 +291,7 @@ describe('===Gas Calculation===', function () {
 
             console.log("TOTAL COLLATERAL ALL INITIALIZE-----" + total);
 
-            await ( await ratioAdapter.transferOwnership(_multisig.address)).wait(); total += Number(receipt.cumulativeGasUsed);
+            await ( await priceController.transferOwnership(_multisig.address)).wait(); total += Number(receipt.cumulativeGasUsed);
             await ( await wAToken.transferOwnership(_multisig.address)).wait(); total += Number(receipt.cumulativeGasUsed);
             await ( await masterVault.transferOwnership(_multisig.address)).wait(); total += Number(receipt.cumulativeGasUsed);
             await ( await davosProvider.transferOwnership(_multisig.address)).wait(); total += Number(receipt.cumulativeGasUsed);
