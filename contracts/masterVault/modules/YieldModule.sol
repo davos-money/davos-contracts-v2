@@ -64,11 +64,11 @@ contract YieldModule is ModuleBase, IYieldModule {
     }
     function _beforeClaim() internal {
 
-        plugin.call(abi.encodeWithSelector(IPluginBase.beforeHook.selector));
+        if (plugin != address(0)) plugin.call(abi.encodeWithSelector(IPluginBase.beforeHook.selector));
      }
     function _afterClaim() internal {
 
-        plugin.call(abi.encodeWithSelector(IPluginBase.afterHook.selector));
+        if (plugin != address(0)) plugin.call(abi.encodeWithSelector(IPluginBase.afterHook.selector));
     }
     function _updateYieldBalance() internal {
 

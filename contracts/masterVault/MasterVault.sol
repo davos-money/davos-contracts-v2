@@ -89,6 +89,8 @@ contract MasterVault is ReentrancyGuardUpgradeable, PausableUpgradeable, Ownable
         address src = _msgSender();
         uint256 maxShares = maxMint(receiver);
 
+        require(shares > 0, InvalidShares());
+        require(receiver != address(0), ZeroAddress());
         require(shares <= maxShares, ERC4626ExceededMaxMint(receiver, shares, maxShares));
         
         // before
@@ -107,6 +109,8 @@ contract MasterVault is ReentrancyGuardUpgradeable, PausableUpgradeable, Ownable
         address src = _msgSender();
         uint256 maxAssets = maxWithdraw(owner);
 
+        require(assets > 0, InvalidAssets());
+        require(receiver != address(0), ZeroAddress());
         require(assets <= maxAssets, ERC4626ExceededMaxWithdraw(owner, assets, maxAssets));
 
         uint256 shares = previewWithdraw(assets);
