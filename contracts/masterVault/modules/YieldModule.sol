@@ -18,7 +18,7 @@ contract YieldModule is ModuleBase, IYieldModule {
     using SafeERC20 for IERC20;
     
     // --- Vars ---
-    uint256 public yieldMargin;        // Percentage of Yield protocol gets, 10,000 = 100%
+    uint256 public yieldMargin;      // Percentage of Yield protocol gets, 10,000 = 100%
     uint256 public yieldBalance;
     uint256 public yieldReserved;
     address public priceController;
@@ -71,13 +71,11 @@ contract YieldModule is ModuleBase, IYieldModule {
     }
     function _beforeClaim() internal {
 
-        IPluginBase(plugin).beforeHook();
-        // if (plugin != address(0)) plugin.call(abi.encodeWithSelector(IPluginBase.beforeHook.selector));
+        if (plugin != address(0)) plugin.call(abi.encodeWithSelector(IPluginBase.beforeHook.selector));
      }
     function _afterClaim() internal {
         
-        IPluginBase(plugin).afterHook();
-        // if (plugin != address(0)) plugin.call(abi.encodeWithSelector(IPluginBase.afterHook.selector));
+        if (plugin != address(0)) plugin.call(abi.encodeWithSelector(IPluginBase.afterHook.selector));
     }
     function _updateYieldBalance() internal {
 
