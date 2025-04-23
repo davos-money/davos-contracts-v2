@@ -6,6 +6,8 @@ import { PausableUpgradeable        } from "@openzeppelin/contracts-upgradeable/
 import { OwnableUpgradeable         } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { IModuleBase                } from  "./interfaces/IModuleBase.sol";
 
+import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
+
 // --- ModuleBase ---
 // --- Base for all MasterVault modules with support of a single plugin ---
 abstract contract ModuleBase is ReentrancyGuardUpgradeable, PausableUpgradeable, OwnableUpgradeable, IModuleBase {
@@ -41,13 +43,16 @@ abstract contract ModuleBase is ReentrancyGuardUpgradeable, PausableUpgradeable,
 
         return assets;
     }
+    function asset() public view virtual returns (address);
 
     // --- Admin ---
     function changePlugin(address _newPlugin) external onlyOwner {
 
-        require(_newPlugin != address(0), ZeroAddress());
         address oldPlugin = plugin;
         plugin = _newPlugin;
+
+        if (_newPlugin != address(0)) IERC20(asset()).approve(_newPlugin, type(uint256).max);
+        if (oldPlugin != address(0)) IERC20(asset()).approve(oldPlugin, 0);
 
         emit PluginChanged(oldPlugin, _newPlugin);
     }

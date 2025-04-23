@@ -17,9 +17,9 @@ abstract contract PluginBase is ReentrancyGuardUpgradeable, PausableUpgradeable,
     // --- Init ---
     function __PluginBase_init() internal onlyInitializing {
 
-        __Ownable_init(_msgSender());
-        __Pausable_init();
         __ReentrancyGuard_init();
+        __Pausable_init();
+        __Ownable_init(_msgSender());
     }
 
     // --- Admin ---

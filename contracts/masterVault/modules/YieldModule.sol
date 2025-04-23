@@ -20,7 +20,8 @@ contract YieldModule is ModuleBase, IYieldModule {
     // --- Vars ---
     uint256 public yieldMargin;        // Percentage of Yield protocol gets, 10,000 = 100%
     uint256 public yieldBalance;
-    IPriceController public priceController;
+    uint256 public yieldReserved;
+    address public priceController;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     // --- Constructor ---
@@ -47,8 +48,9 @@ contract YieldModule is ModuleBase, IYieldModule {
 
         _beforeClaim();
         
-        uint256 availableYields = getVaultYield();
+        uint256 availableYields = getVaultYield() + yieldReserved;
         if (availableYields <= 0) return 0;
+        if (yieldReserved != 0) yieldReserved = 0;
 
         IERC20 _asset = IERC20(asset());
         _asset.safeTransferFrom(masterVault, address(this), availableYields);
@@ -62,13 +64,20 @@ contract YieldModule is ModuleBase, IYieldModule {
 
         return availableYields;
     }
+    function _reserveYield() internal returns (uint256) {
+
+        uint256 availableYields = getVaultYield();
+        if (availableYields > 0) yieldReserved += availableYields;
+    }
     function _beforeClaim() internal {
 
-        if (plugin != address(0)) plugin.call(abi.encodeWithSelector(IPluginBase.beforeHook.selector));
+        IPluginBase(plugin).beforeHook();
+        // if (plugin != address(0)) plugin.call(abi.encodeWithSelector(IPluginBase.beforeHook.selector));
      }
     function _afterClaim() internal {
-
-        if (plugin != address(0)) plugin.call(abi.encodeWithSelector(IPluginBase.afterHook.selector));
+        
+        IPluginBase(plugin).afterHook();
+        // if (plugin != address(0)) plugin.call(abi.encodeWithSelector(IPluginBase.afterHook.selector));
     }
     function _updateYieldBalance() internal {
 
@@ -87,8 +96,8 @@ contract YieldModule is ModuleBase, IYieldModule {
     function changePriceController(address _newController) external onlyOwner {
 
         require(_newController != address(0), ZeroAddress());
-        address oldAdatper = address(priceController);
-        priceController = IPriceController(_newController);
+        address oldAdatper = priceController;
+        priceController = _newController;
 
         emit PriceControllerChanged(oldAdatper, _newController);
     }
@@ -103,7 +112,7 @@ contract YieldModule is ModuleBase, IYieldModule {
 
         uint256 yield = diffBalance * yieldMargin / 1e4;
 
-        return priceController.convertToShares(asset(), yield);
+        return IPriceController(priceController).convertToShares(asset(), yield);
     }
     function getYieldRoyalty(uint256 yield) public view returns (uint256) {
 
@@ -114,7 +123,7 @@ contract YieldModule is ModuleBase, IYieldModule {
     }
     function expandUnderlyings() public view returns (uint256) {
 
-        return priceController.convertToAssets(asset(), IERC20(asset()).balanceOf(masterVault));
+        return IPriceController(priceController).convertToAssets(asset(), IERC20(asset()).balanceOf(masterVault));
     }
 
     // --- ModuleBase ---
@@ -129,19 +138,19 @@ contract YieldModule is ModuleBase, IYieldModule {
 
     function beforeDeposit(bytes memory _data, bytes memory _context) external {
 
-        _claimYield();
+        _reserveYield();
     }
     function beforeRedeem(bytes memory _data, bytes memory _context) external {
 
-        _claimYield();
+        _reserveYield();
     }
     function beforeMint(bytes memory _data, bytes memory _context) external {
 
-        _claimYield();
+        _reserveYield();
     }
     function beforeWithdraw(bytes memory _data, bytes memory _context) external {
 
-        _claimYield();
+        _reserveYield();
     }
 
     function afterDeposit(bytes memory _data, bytes memory _context) external {
@@ -163,6 +172,6 @@ contract YieldModule is ModuleBase, IYieldModule {
 
     function previewTotalAssets(uint256 _underlyings) external view override returns (uint256 _actualAssets) {
 
-        _actualAssets = _underlyings - getVaultYield();
+        _actualAssets = _underlyings - getVaultYield() - yieldReserved;
     }
 }

@@ -11,4 +11,7 @@ interface IYieldModule {
     
     // --- Errors ---
     error MoreThanMax();
+
+    // --- Functions ---
+    function priceController() external view returns (address);
 }

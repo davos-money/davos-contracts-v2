@@ -1208,6 +1208,11 @@
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.9.3.tgz#00d7a8cf35a475b160b3f0293a6403c511099364"
   integrity sha512-He3LieZ1pP2TNt5JbkPA4PNT9WC3gOTOlDcFGJW4Le4QKqwmiNJCRt44APfxMxvq7OugU/cqYuPcSBzOw38DAg==
 
+"@openzeppelin/contracts@5.0.2":
+  version "5.0.2"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-5.0.2.tgz#b1d03075e49290d06570b2fd42154d76c2a5d210"
+  integrity sha512-ytPc6eLGcHHnapAZ9S+5qsdomhjo6QBHTDRRBFfTxXIpsicMhVPouPgmUPebZZZGX7vt9USA+Z+0M0dSVtSUEA==
+
 "@openzeppelin/contracts@^5.3.0":
   version "5.3.0"
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-5.3.0.tgz#0a90ce16f5c855e3c8239691f1722cd4999ae741"
@@ -1790,10 +1795,28 @@
   resolved "https://registry.yarnpkg.com/@uniswap/lib/-/lib-4.0.1-alpha.tgz#2881008e55f075344675b3bca93f020b028fbd02"
   integrity sha512-f6UIliwBbRsgVLxIaBANF6w09tYqc6Y/qXdsrbEmXHyFA7ILiKrIwRFXe1yOg8M3cksgVsO9N7yuL2DdCGQKBA==
 
-"@uniswap/v2-core@^1.0.1":
+"@uniswap/permit2@github:Uniswap/permit2":
+  version "1.0.0"
+  resolved "https://codeload.github.com/Uniswap/permit2/tar.gz/cc56ad0f3439c502c246fc5cfcc3db92bb8b7219"
+
+"@uniswap/universal-router@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@uniswap/universal-router/-/universal-router-2.0.0.tgz#ae6161c23ebfae6553ae8d730593ee94aef693a7"
+  integrity sha512-6V21kuf547hE1gLfLQ89gv41DMSJY1ZZKer/k7CBagNPJ0oDnUyme+qQPtdoWknyUgSKd1M6sDm/WpocjVmPlA==
+  dependencies:
+    "@openzeppelin/contracts" "5.0.2"
+    "@uniswap/v2-core" "1.0.1"
+    "@uniswap/v3-core" "1.0.0"
+
+"@uniswap/v2-core@1.0.1", "@uniswap/v2-core@^1.0.1":
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/@uniswap/v2-core/-/v2-core-1.0.1.tgz#af8f508bf183204779938969e2e54043e147d425"
   integrity sha512-MtybtkUPSyysqLY2U210NBDeCHX+ltHt3oADGdjqoThZaFRDKwM6k1Nb3F0A3hk5hwuQvytFWhrWHOEq6nVJ8Q==
+
+"@uniswap/v3-core@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@uniswap/v3-core/-/v3-core-1.0.0.tgz#6c24adacc4c25dceee0ba3ca142b35adbd7e359d"
+  integrity sha512-kSC4djMGKMHj7sLMYVnn61k9nu+lHjMIxgg9CDQT+s2QYLoA56GbSK9Oxr+qJXzzygbkrmuY6cwgP6cW2JXPFA==
 
 "@uniswap/v3-core@^1.0.0":
   version "1.0.1"
@@ -1810,6 +1833,16 @@
     "@uniswap/v2-core" "^1.0.1"
     "@uniswap/v3-core" "^1.0.0"
     base64-sol "1.0.1"
+
+"@uniswap/v4-core@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@uniswap/v4-core/-/v4-core-1.0.1.tgz#d7bf898306a8ab3a89756a54191b38b6af180440"
+  integrity sha512-+UITeH0s/EXJ698nKFoWX6ZW2dOnIDjhUI3AJ0Hg3v+w/Sy4JIDsgmsQSeNu1FAEc72xm4muKY6YuXu9bR2X4Q==
+
+"@uniswap/v4-periphery@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@uniswap/v4-periphery/-/v4-periphery-1.0.1.tgz#cbd2a799dce5dc7c545a408c3d48d5dcd5893b4b"
+  integrity sha512-/ZLz7mCLL0eTo1M0h/Lc180OYMmpUEGb0yfqZ79nsqVdZCFp0TLQstLZ/zC+ofF7SrMoeGb57p+T8hbe6MXwNw==
 
 "@yarnpkg/lockfile@^1.1.0":
   version "1.1.0"
@@ -3955,7 +3988,7 @@ debug@3.2.6:
   dependencies:
     ms "^2.1.1"
 
-debug@4, debug@^4.1.1, debug@^4.3.1, debug@^4.3.5:
+debug@4, debug@^4.1.1, debug@^4.3.1, debug@^4.3.4, debug@^4.3.5:
   version "4.4.0"
   resolved "https://registry.yarnpkg.com/debug/-/debug-4.4.0.tgz#2b3f2aea2ffeb776477460267377dc8710faba8a"
   integrity sha512-6WTZ/IxCY/T6BALoZHaE4ctp9xm+Z5kY/pzYaCHRFeyVhojxlrm+46y68HA6hr0TcwEssoxNiDEUJQjfPZ/RYA==
@@ -5942,6 +5975,16 @@ hardhat-storage-layout@^0.1.6:
   integrity sha512-q723g2iQnJpRdMC6Y8fbh/stG6MLHKNxa5jq/ohjtD5znOlOzQ6ojYuInY8V4o4WcPyG3ty4hzHYunLf66/1+A==
   dependencies:
     console-table-printer "^2.9.0"
+
+hardhat-tracer@^3.1.0:
+  version "3.1.0"
+  resolved "https://registry.yarnpkg.com/hardhat-tracer/-/hardhat-tracer-3.1.0.tgz#460ced6bd6919928fc679a8d5764f2b861283b3b"
+  integrity sha512-Ip16HQAuzbqbNJUIEVfqmbPmOY90bxZSpwu5Q73cwloy+LUYA04BATUM9Gui5H7zcgsgZ1IVy7pSYn6ZMjLmag==
+  dependencies:
+    chalk "^4.1.2"
+    debug "^4.3.4"
+    ethers "^5.6.1"
+    semver "^7.6.2"
 
 hardhat@^2.17.0:
   version "2.23.0"
@@ -9162,7 +9205,7 @@ semver@^6.3.0:
   resolved "https://registry.yarnpkg.com/semver/-/semver-6.3.1.tgz#556d2ef8689146e46dcea4bfdd095f3434dffcb4"
   integrity sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==
 
-semver@^7.3.4, semver@^7.5.3, semver@^7.5.4, semver@^7.6.3:
+semver@^7.3.4, semver@^7.5.3, semver@^7.5.4, semver@^7.6.2, semver@^7.6.3:
   version "7.7.1"
   resolved "https://registry.yarnpkg.com/semver/-/semver-7.7.1.tgz#abd5098d82b18c6c81f6074ff2647fd3e7220c9f"
   integrity sha512-hlq8tAfn0m/61p4BVRcPzIGr6LKiMwo4VM6dGi6pt4qcRkmNzTcWq6eCEjEh+qXjkMDvPlOFFSGwQjoEa6gyMA==
@@ -9552,6 +9595,11 @@ solidity-coverage@^0.7.20:
     semver "^7.3.4"
     shelljs "^0.8.3"
     web3-utils "^1.3.0"
+
+solmate@^6.8.0:
+  version "6.8.0"
+  resolved "https://registry.yarnpkg.com/solmate/-/solmate-6.8.0.tgz#acb665d88783745899e2f6345e3ac66d5b7df2ab"
+  integrity sha512-/oI8kgEvSxGG1mrFv3FmCEZd0F8Z9VzRmoYMIhzmmzt6mjtPwfdCm3oh8yOL7bMHJBSfXJuMpnMPrM0uyaKsKg==
 
 source-map-resolve@^0.5.0:
   version "0.5.3"

@@ -127,4 +127,8 @@ module.exports = {
         enabled: process.env.REPORT_GAS ? true : false,
         currency: 'USD',
     },
+
+    tracer: {
+        showAddresses: true
+      }
 };

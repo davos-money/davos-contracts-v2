@@ -137,6 +137,9 @@ describe('===YieldModule===', function () {
           await mv.connect(signer1).withdraw(withdrawAmount, signer1.address, signer1.address); // withdraw
 
           expect((await mv.balanceOf(signer1.address)).toString()).to.be.eq('0', 'signer still have mv balance')
+          
+          await yieldModule.claimYield();
+
           expect((await token.balanceOf(mv.address)).toString()).to.be.eq('0', 'dust')
         })
 
