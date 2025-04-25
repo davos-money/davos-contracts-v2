@@ -19,7 +19,7 @@ contract MasterVault is ReentrancyGuardUpgradeable, PausableUpgradeable, Ownable
     address public davosProvider;
 
     IModuleBase[] public modules;
-    mapping(address => bytes) public contexts; // _module to _data
+    mapping(address module => bytes data) public contexts;
 
     // --- Mods ---
     modifier onlyOwnerOrProvider() {

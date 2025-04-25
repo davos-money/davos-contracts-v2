@@ -14,11 +14,6 @@ import "./interfaces/ICertToken.sol";
 import "./interfaces/IWrapped.sol";
 import "../interfaces/IInteraction.sol";
 
-interface IWAToken {
-    function deposit(uint256 assets, address receiver) external returns (uint256);
-    function redeem(uint256 shares, address receiver, address owner) external returns (uint256);
-}
-
 // --- Wrapping adaptor with instances per Underlying for MasterVault ---
 contract DavosProvider is IDavosProvider, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
 

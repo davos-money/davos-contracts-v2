@@ -128,7 +128,7 @@ contract Jug is Initializable, JugLike {
 
         int256 foldValue = _diff(rate, prev);
 
-        if (foldValue < 0) {
+        if (foldValue < 0 || licensor == address(0)) {
             vat.fold(ilk, vow, foldValue);
         }
         else {

@@ -48,7 +48,7 @@ describe('===Gas Calculation===', function () {
 
             this.PriceController = await ethers.getContractFactory("PriceController");
             
-            this.Oracle = await ethers.getContractFactory("AnkrBNBOracle");
+            this.Oracle = await ethers.getContractFactory("CollateralOracle");
 
             this.WAToken = await ethers.getContractFactory("WAToken");
 
@@ -227,7 +227,7 @@ describe('===Gas Calculation===', function () {
             gemJoin = await ethers.getContractAt("GemJoin", gemJoin.address);
             clip = await ethers.getContractAt("Clipper", clip.address);
             priceController = await ethers.getContractAt("PriceController", priceController.address);
-            oracle = await ethers.getContractAt("AnkrBNBOracle", oracle.address);
+            oracle = await ethers.getContractAt("CollateralOracle", oracle.address);
             wAToken = await ethers.getContractAt("WAToken", wAToken.address);
 
             // TEMP

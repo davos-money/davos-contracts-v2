@@ -3,9 +3,9 @@ pragma solidity ^0.8.10;
 
 import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
-import "../LstOracle.sol";
+import "../OracleBase.sol";
 
-abstract contract DirectRateLstOracle is LstOracle {
+abstract contract DirectRateLstOracle is OracleBase {
 
     AggregatorV3Interface internal priceFeed; // direct price feed of liquid staked token (ex. swETH/USD)
 

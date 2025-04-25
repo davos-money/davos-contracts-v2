@@ -39,7 +39,7 @@ contract Davos is Initializable, IDavos {
     }
 
     // --- ERC20 Data ---
-    string  public constant name     = "Davos.xyz USD";
+    string  public constant name     = "Davos.xyz Stablecoin";
     string  public symbol;
     string  public constant version  = "1";
     uint8   public constant decimals = 18;

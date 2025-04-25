@@ -1,0 +1,11 @@
+{
+    "_swapBurn_router": "", 
+    "_swapBurn__permit2": "", 
+    "_swapBurn_priceFeed": "",
+    "_swapBurn_tokenOut": "", 
+    "_swapBurn_fee": "", 
+    "_swapBurn_tickSpacing": "", 
+    "_swapBurn_deadline": "", 
+    "_swapBurn_slippage": "",
+    "_swapBurn_yieldModule": ""
+}

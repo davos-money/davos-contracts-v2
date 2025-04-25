@@ -2,7 +2,7 @@ const { ethers, network, upgrades} = require('hardhat');
 const { expect } = require("chai");
 const {BigNumber} = require("ethers");
 
-describe('WstETHOracle', function () {
+describe('CollateralOracle', function () {
     let deployer, signer1, signer2;
 
     let oracle, mVault, token, yieldModule;
@@ -16,7 +16,7 @@ describe('WstETHOracle', function () {
         [deployer, signer1, signer2] = await ethers.getSigners();
 
         // Contract factory
-        this.WstETHOracle = await ethers.getContractFactory("WstETHOracle");
+        this.CollateralOracle = await ethers.getContractFactory("CollateralOracle");
         this.AggregatorV3 = await ethers.getContractFactory("MockAggregator");
         this.Token = await ethers.getContractFactory("Token");
         this.MasterVaultV2 = await ethers.getContractFactory("MasterVault");
@@ -36,7 +36,7 @@ describe('WstETHOracle', function () {
         await pc.deployed();
         await pc.setToken(token.address, 'getStETHByWstETH(uint256)', 'getWstETHByStETH(uint256)', '', false);
 
-        oracle = await upgrades.deployProxy(this.WstETHOracle, [aggregator.address, token.address, mVault.address, pc.address], {initializer: "initialize"});
+        oracle = await upgrades.deployProxy(this.CollateralOracle, [aggregator.address, token.address, mVault.address, pc.address], {initializer: "initialize"});
         await oracle.deployed();
 
         licensor = await upgrades.deployProxy(this.Licensor, [deployer.address, 0, 0], {initializer: "initialize"});

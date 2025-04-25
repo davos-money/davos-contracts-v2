@@ -3,10 +3,10 @@ pragma solidity ^0.8.10;
 
 import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "../LstOracle.sol";
+import "../OracleBase.sol";
 
 // get price using conversion of lst to value and using value price feed to USD
-abstract contract CrossRateLstOracle is LstOracle {
+abstract contract CrossRateLstOracle is OracleBase {
 
     AggregatorV3Interface internal priceFeed; // price feed of value (ex. ETH/USD)
     address internal lsToken; // liquid staked token (ex. wstETH, ankrETH)

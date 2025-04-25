@@ -12,8 +12,6 @@ require('hardhat-storage-layout');
 require('@openzeppelin/hardhat-upgrades');
 require("@nomicfoundation/hardhat-verify");
 
-const fs = require("fs");
-
 module.exports = {
     solidity: {
         compilers: [
@@ -77,9 +75,9 @@ module.exports = {
             accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY}`],
             gasPrice: parseInt(process.env.GAS_PRICE_ETH) || 'auto'
         },
-        ethereumTestnet: {
-            url: process.env.SEPOLIA_URL,
-            chainId: 17000,
+        ethereumSepolia: {
+            url: process.env.ETHEREUM_SEPOLIA_URL,
+            chainId: 11155111,
             accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY}`],
             gasPrice: parseInt(process.env.GAS_PRICE_ETH) || 'auto'
         }

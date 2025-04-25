@@ -15,9 +15,9 @@ interface IPriceController {
 }
 
 // Abstract contract as base for any liquid staking master vault
-abstract contract LstOracle is Initializable {
+abstract contract OracleBase is Initializable {
 
-    IMasterVault internal masterVault; // master vault
+    IMasterVault internal masterVault;
 
     function __LstOracle__init(IMasterVault _masterVault) internal onlyInitializing {
         masterVault = _masterVault;

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.10;
 
-import "./LstOracle.sol";
 import "./extensions/Cross2RateLstOracle.sol";
 
 // 0x536218f9E9Eb48863970252233c8F271f554C2d0 rETH/ETH

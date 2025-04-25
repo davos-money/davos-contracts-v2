@@ -3,10 +3,10 @@ pragma solidity ^0.8.10;
 
 import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "../LstOracle.sol";
+import "../OracleBase.sol";
 
 // get price based on cross rate from priceFeed1 to priceFeed2
-abstract contract Cross2RateLstOracle is LstOracle {
+abstract contract Cross2RateLstOracle is OracleBase {
 
     AggregatorV3Interface internal priceFeed1; // price feed of LST (ex. rETH/ETH)
     AggregatorV3Interface internal priceFeed2; // price feed of staked token (ex. ETH/USDT)

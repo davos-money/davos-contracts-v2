@@ -8,8 +8,8 @@ import "./interfaces/ISDavos.sol";
 contract sDusd is ISDavos, Initializable {
 
     // --- Data ---
-    string  public constant name     = "Staked DUSD";
-    string  public constant symbol   = "sDUSD";
+    string  public constant name     = "Staked Davos.xyz Stablecoin";
+    string  public constant symbol   = "sSTC";
     string  public constant version  = "1";
     uint8   public constant decimals = 18;
     uint256 public totalSupply;

@@ -10,7 +10,7 @@ describe('===SwapBurn===', function () {
     let deployer, susdeHolder, usdeHolder, signer1;
 
     let davos, susde, usde,
-        mv, vow, yieldModule, licensor, priceController, ratioProvider,
+        mv, vow, yieldModule, licensor, priceController,
         router, permit2, priceFeed,
         swapburn;
 
@@ -68,9 +68,6 @@ describe('===SwapBurn===', function () {
         davos = await ethers.getContractAt("Token", "0xdAC17F958D2ee523a2206206994597C13D831ec7");  // USDT
 
         mv = await upgrades.deployProxy(this.MasterVault, ["Master Vault Token", "ceMATIC", susde.address], {initializer: "initialize"});
-        await mv.deployed();
-
-        ratioProvider = await upgrades.deployProxy(this.Token, ["name", "symbol"], {initializer: "initialize"});
         await mv.deployed();
 
         priceController = await upgrades.deployProxy(this.PriceController, [], {initializer: "initialize"});
