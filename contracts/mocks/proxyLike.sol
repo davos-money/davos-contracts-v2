@@ -2,7 +2,7 @@
 pragma solidity ^0.8.10;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "../jug.sol";
+import "../fee.sol";
 
 interface GemLike {
     function approve(address, uint) external;
@@ -20,11 +20,11 @@ interface DaiJoinLike {
 
 contract ProxyLike is Ownable {
     uint256 constant RAY = 10 ** 27;
-    address jug;
-    address vat;
-    constructor(address _jug, address _vat) Ownable(msg.sender) {
-        jug = _jug;
-        vat = _vat;
+    address fee;
+    address ledger;
+    constructor(address _fee, address _ledger) Ownable(msg.sender) {
+        fee = _fee;
+        ledger = _ledger;
     }
 
     function sub(uint x, uint y) internal pure returns (uint z) {
@@ -39,8 +39,8 @@ contract ProxyLike is Ownable {
         }
     }
 
-    function jugInitFile(bytes32 _gem, bytes32 _what, uint256 _rate) external onlyOwner {
-        Jug(jug).init(_gem);
-        Jug(jug).file(_gem, _what, _rate);
+    function feeInitFile(bytes32 _gem, bytes32 _what, uint256 _rate) external onlyOwner {
+        Fee(fee).init(_gem);
+        Fee(fee).file(_gem, _what, _rate);
     }
 }

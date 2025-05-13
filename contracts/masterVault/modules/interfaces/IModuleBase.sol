@@ -7,7 +7,7 @@ interface IModuleBase {
     event PluginChanged(address indexed _oldPlugin, address indexed _newPlugin);    
 
     // --- Errors ---
-    error NotOwnerOrDavosProvider();
+    error NotOwnerOrProvider();
     error ZeroAddress();
 
     // --- Functions ---

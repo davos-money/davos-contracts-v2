@@ -9,8 +9,8 @@ module.exports = {
         "oracle/interfaces",
         "oracle/libraries",
         "oracle/extensions/DirectRateOracle.sol",
-        "abaci.sol",
-        "pot.sol",
-        "sDavos.sol"
+        "decay.sol",
+        "savings.sol",
+        "sStablecoin.sol"
     ]
 };

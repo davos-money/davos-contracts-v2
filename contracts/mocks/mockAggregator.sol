@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/// jar.sol -- Davos distribution farming
+/// jar.sol -- Stablecoin distribution farming
 
 // Copyright (C) 2022
 //

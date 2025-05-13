@@ -7,14 +7,14 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./dMath.sol";
 import "./oracle/libraries/FullMath.sol";
 
-import "./interfaces/VatLike.sol";
-import "./interfaces/DavosJoinLike.sol";
+import "./interfaces/LedgerLike.sol";
+import "./interfaces/StablecoinJoinLike.sol";
 import "./interfaces/GemJoinLike.sol";
-import "./interfaces/JugLike.sol";
-import "./interfaces/DogLike.sol";
+import "./interfaces/FeeLike.sol";
+import "./interfaces/LiquidatorLike.sol";
 import "./interfaces/PipLike.sol";
-import "./interfaces/SpotLike.sol";
-import "./provider/interfaces/IDavosProvider.sol";
+import "./interfaces/VisionLike.sol";
+import "./provider/interfaces/IProvider.sol";
 import "./interfaces/IInteraction.sol";
 
 import "./libraries/AuctionProxy.sol";
@@ -36,12 +36,12 @@ contract Interaction is Initializable, IInteraction {
         _;
     }
 
-    VatLike public vat;
-    SpotLike public spotter;
-    IERC20 public davos;
-    DavosJoinLike public davosJoin;
-    JugLike public jug;
-    address public dog;
+    LedgerLike public ledger;
+    VisionLike public vision;
+    IERC20 public stablecoin;
+    StablecoinJoinLike public stablecoinJoin;
+    FeeLike public fee;
+    address public liquidator;
 
     mapping(address => uint256) public deposits;
     mapping(address => CollateralType) public collaterals;
@@ -49,7 +49,7 @@ contract Interaction is Initializable, IInteraction {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    mapping(address => address) public davosProviders; // e.g. Auction purchase from ceamaticc to amaticc
+    mapping(address => address) public providers;
 
     uint256 public whitelistMode;
     address public whitelistOperator;
@@ -86,83 +86,83 @@ contract Interaction is Initializable, IInteraction {
     constructor() { _disableInitializers(); }
 
     function initialize(
-        address vat_,
-        address spot_,
-        address davos_,
-        address davosJoin_,
-        address jug_,
-        address dog_
+        address ledger_,
+        address vision_,
+        address stablecoin_,
+        address stablecoinJoin_,
+        address fee_,
+        address liquidator_
     ) external initializer {
 
         wards[msg.sender] = 1;
 
-        vat = VatLike(vat_);
-        spotter = SpotLike(spot_);
-        davos = IERC20(davos_);
-        davosJoin = DavosJoinLike(davosJoin_);
-        jug = JugLike(jug_);
-        dog = dog_;
+        ledger = LedgerLike(ledger_);
+        vision = VisionLike(vision_);
+        stablecoin = IERC20(stablecoin_);
+        stablecoinJoin = StablecoinJoinLike(stablecoinJoin_);
+        fee = FeeLike(fee_);
+        liquidator = liquidator_;
 
-        vat.hope(davosJoin_);
+        ledger.hope(stablecoinJoin_);
 
-        davos.approve(davosJoin_, type(uint256).max);
+        stablecoin.approve(stablecoinJoin_, type(uint256).max);
     }
 
-    function setCores(address vat_, address spot_, address davosJoin_,
-        address jug_) public auth {
+    function setCores(address ledger_, address vision_, address stablecoinJoin_,
+        address fee_) public auth {
         // Reset previous approval
-        davos.approve(address(davosJoin), 0);
+        stablecoin.approve(address(stablecoinJoin), 0);
 
-        vat = VatLike(vat_);
-        spotter = SpotLike(spot_);
-        davosJoin = DavosJoinLike(davosJoin_);
-        jug = JugLike(jug_);
+        ledger = LedgerLike(ledger_);
+        vision = VisionLike(vision_);
+        stablecoinJoin = StablecoinJoinLike(stablecoinJoin_);
+        fee = FeeLike(fee_);
 
-        vat.hope(davosJoin_);
+        ledger.hope(stablecoinJoin_);
 
-        davos.approve(davosJoin_, type(uint256).max);
+        stablecoin.approve(stablecoinJoin_, type(uint256).max);
     }
 
-    function setDavosApprove() public auth {
-        davos.approve(address(davosJoin), type(uint256).max);
+    function setStablecoinApprove() public auth {
+        stablecoin.approve(address(stablecoinJoin), type(uint256).max);
     }
 
     function setCollateralType(
         address token,
         address gemJoin,
         bytes32 ilk,
-        address clip,
+        address jail,
         uint256 mat
     ) external auth {
         require(collaterals[token].live == 0, "Interaction/token-already-init");
         require(ilk != bytes32(0), "Interaction/empty-ilk");
-        vat.init(ilk);
-        jug.init(ilk);
-        spotter.file(ilk, "mat", mat);
-        collaterals[token] = CollateralType(GemJoinLike(gemJoin), ilk, 1, clip);
+        ledger.init(ilk);
+        fee.init(ilk);
+        vision.file(ilk, "mat", mat);
+        collaterals[token] = CollateralType(GemJoinLike(gemJoin), ilk, 1, jail);
         IERC20(token).approve(gemJoin, type(uint256).max);
-        vat.rely(gemJoin);
+        ledger.rely(gemJoin);
         emit CollateralEnabled(token, ilk);
     }
 
     function setCollateralDuty(address token, uint data) external auth {
         CollateralType memory collateralType = collaterals[token];
         _checkIsLive(collateralType.live);
-        jug.drip(collateralType.ilk);
-        jug.file(collateralType.ilk, "duty", data);
+        fee.drip(collateralType.ilk);
+        fee.file(collateralType.ilk, "duty", data);
     }
 
-    function setDavosProvider(address token, address davosProvider) external auth {
-        require(davosProvider != address(0));
-        davosProviders[token] = davosProvider;
-        emit ChangeDavosProvider(davosProvider);
+    function setProvider(address token, address Provider) external auth {
+        require(Provider != address(0));
+        providers[token] = Provider;
+        emit ChangeProvider(Provider);
     }
 
     function removeCollateralType(address token) external auth {
         require(collaterals[token].live != 0, "Interaction/token-not-init");
         collaterals[token].live = 2; //STOPPED
         address gemJoin = address(collaterals[token].gem);
-        vat.deny(gemJoin);
+        ledger.deny(gemJoin);
         IERC20(token).approve(gemJoin, 0);
         emit CollateralDisabled(token, collaterals[token].ilk);
     }
@@ -170,7 +170,7 @@ contract Interaction is Initializable, IInteraction {
     function reenableCollateralType(address token) external auth {
         collaterals[token].live = 1;
         address gemJoin = address(collaterals[token].gem);
-        vat.rely(gemJoin);
+        ledger.rely(gemJoin);
         IERC20(token).approve(gemJoin, type(uint256).max);
         emit CollateralEnabled(token, collaterals[token].ilk);
     }
@@ -194,10 +194,10 @@ contract Interaction is Initializable, IInteraction {
         CollateralType memory collateralType = collaterals[token];
         require(collateralType.live == 1, "Interaction/inactive-collateral");
 
-        if (davosProviders[token] != address(0)) {
+        if (providers[token] != address(0)) {
             require(
-                msg.sender == davosProviders[token],
-                "Interaction/only davos provider can deposit for this token"
+                msg.sender == providers[token],
+                "Interaction/only stablecoin provider can deposit for this token"
             );
         }
         require(dink <= uint256(type(int256).max), "Interaction/too-much-requested");
@@ -208,8 +208,8 @@ contract Interaction is Initializable, IInteraction {
         require(preBalance + dink == postBalance, "Interaction/deposit-deflated");
 
         collateralType.gem.join(participant, dink);
-        vat.behalf(participant, address(this));
-        vat.frob(collateralType.ilk, participant, participant, participant, int256(dink), 0);
+        ledger.behalf(participant, address(this));
+        ledger.frob(collateralType.ilk, participant, participant, participant, int256(dink), 0);
 
         deposits[token] += dink;
 
@@ -217,40 +217,40 @@ contract Interaction is Initializable, IInteraction {
         return dink;
     }
 
-    function borrow(address token, uint256 davosAmount) external returns (uint256) {
+    function borrow(address token, uint256 stablecoinAmount) external returns (uint256) {
         CollateralType memory collateralType = collaterals[token];
         require(collateralType.live == 1, "Interaction/inactive-collateral");
-        require(davosAmount > 0,"Interaction/invalid-davosAmount");
+        require(stablecoinAmount > 0,"Interaction/invalid-stablecoinAmount");
 
         drip(token);
 
-        (, uint256 rate, , ,) = vat.ilks(collateralType.ilk);
-        int256 dart = int256(davosAmount * RAY / rate);
+        (, uint256 rate, , ,) = ledger.ilks(collateralType.ilk);
+        int256 dart = int256(stablecoinAmount * RAY / rate);
         require(dart >= 0, "Interaction/too-much-requested");
-        if (uint256(dart) * rate < davosAmount * RAY) {
+        if (uint256(dart) * rate < stablecoinAmount * RAY) {
             dart += 1; //ceiling
         }
-        vat.frob(collateralType.ilk, msg.sender, msg.sender, msg.sender, 0, dart);
-        vat.move(msg.sender, address(this), davosAmount * RAY);
-        davosJoin.exit(msg.sender, davosAmount);
+        ledger.frob(collateralType.ilk, msg.sender, msg.sender, msg.sender, 0, dart);
+        ledger.move(msg.sender, address(this), stablecoinAmount * RAY);
+        stablecoinJoin.exit(msg.sender, stablecoinAmount);
 
-        (uint256 ink, uint256 art) = vat.urns(collateralType.ilk, msg.sender);
+        (uint256 ink, uint256 art) = ledger.urns(collateralType.ilk, msg.sender);
         uint256 liqPrice = liquidationPriceForDebt(collateralType.ilk, ink, art);
-        emit Borrow(msg.sender, token, ink, davosAmount, liqPrice);
+        emit Borrow(msg.sender, token, ink, stablecoinAmount, liqPrice);
         return uint256(dart);
     }
 
-    // Burn user's DAVOS.
+    // Burn user's STABLECOIN.
     // N.B. User collateral stays the same.
-    function payback(address token, uint256 davosAmount) external returns (int256) {
-        require(davosAmount > 0,"Interaction/invalid-davosAmount");
+    function payback(address token, uint256 stablecoinAmount) external returns (int256) {
+        require(stablecoinAmount > 0,"Interaction/invalid-stablecoinAmount");
         CollateralType memory collateralType = collaterals[token];
         // _checkIsLive(collateralType.live); Checking in the `drip` function
 
-        (,uint256 rate,,,) = vat.ilks(collateralType.ilk);
-        (,uint256 art) = vat.urns(collateralType.ilk, msg.sender);
+        (,uint256 rate,,,) = ledger.ilks(collateralType.ilk);
+        (,uint256 art) = ledger.urns(collateralType.ilk, msg.sender);
         int256 dart;
-        uint256 realAmount = davosAmount;
+        uint256 realAmount = stablecoinAmount;
         uint256 debt = rate * art;
         if (realAmount * RAY >= debt) { // Close CDP
             dart = int(art);
@@ -260,22 +260,22 @@ contract Interaction is Initializable, IInteraction {
             dart = int256(FullMath.mulDiv(realAmount, RAY, rate));
         }
 
-        IERC20(davos).safeTransferFrom(msg.sender, address(this), realAmount);
-        davosJoin.join(msg.sender, realAmount);
+        IERC20(stablecoin).safeTransferFrom(msg.sender, address(this), realAmount);
+        stablecoinJoin.join(msg.sender, realAmount);
 
         require(dart >= 0, "Interaction/too-much-requested");
 
-        vat.frob(collateralType.ilk, msg.sender, msg.sender, msg.sender, 0, - dart);
+        ledger.frob(collateralType.ilk, msg.sender, msg.sender, msg.sender, 0, - dart);
 
         drip(token);
 
-        (uint256 ink, uint256 userDebt) = vat.urns(collateralType.ilk, msg.sender);
+        (uint256 ink, uint256 userDebt) = ledger.urns(collateralType.ilk, msg.sender);
         uint256 liqPrice = liquidationPriceForDebt(collateralType.ilk, ink, userDebt);
         emit Payback(msg.sender, token, realAmount, userDebt, liqPrice);
         return dart;
     }
 
-    // Unlock and transfer to the user `dink` amount of aMATICc
+    // Unlock and transfer to the user `dink` amount of collateral
     function withdraw(
         address participant,
         address token,
@@ -283,10 +283,10 @@ contract Interaction is Initializable, IInteraction {
     ) external returns (uint256) {
         CollateralType memory collateralType = collaterals[token];
         _checkIsLive(collateralType.live);
-        if (davosProviders[token] != address(0)) {
+        if (providers[token] != address(0)) {
             require(
-                msg.sender == davosProviders[token],
-                "Interaction/Only davos provider can call this function for this token"
+                msg.sender == providers[token],
+                "Interaction/Only stablecoin provider can call this function for this token"
             );
         } else {
             require(
@@ -298,8 +298,8 @@ contract Interaction is Initializable, IInteraction {
         uint256 unlocked = free(token, participant);
         if (unlocked < dink) {
             int256 diff = int256(dink) - int256(unlocked);
-            vat.frob(collateralType.ilk, participant, participant, participant, - diff, 0);
-            vat.flux(collateralType.ilk, participant, address(this), uint256(diff));
+            ledger.frob(collateralType.ilk, participant, participant, participant, - diff, 0);
+            ledger.flux(collateralType.ilk, participant, address(this), uint256(diff));
         }
         // Collateral is actually transferred back to user inside `exit` operation.
         // See GemJoin.exit()
@@ -314,26 +314,26 @@ contract Interaction is Initializable, IInteraction {
         CollateralType memory collateralType = collaterals[token];
         _checkIsLive(collateralType.live);
 
-        jug.drip(collateralType.ilk);
+        fee.drip(collateralType.ilk);
     }
 
     function poke(address token) public {
         CollateralType memory collateralType = collaterals[token];
         _checkIsLive(collateralType.live);
 
-        spotter.poke(collateralType.ilk);
+        vision.poke(collateralType.ilk);
     }
 
     //    /////////////////////////////////
     //    //// VIEW                    ////
     //    /////////////////////////////////
 
-    // Price of the collateral asset(aMATICc) from Oracle
+    // Price of the collateral asset from Oracle
     function collateralPrice(address token) public view returns (uint256) {
         CollateralType memory collateralType = collaterals[token];
         _checkIsLive(collateralType.live);
 
-        (PipLike pip,) = spotter.ilks(collateralType.ilk);
+        (PipLike pip,) = vision.ilks(collateralType.ilk);
         (bytes32 price, bool has) = pip.peek();
         if (has) {
             return uint256(price);
@@ -342,12 +342,12 @@ contract Interaction is Initializable, IInteraction {
         }
     }
 
-    // Returns the DAVOS price in $
-    function davosPrice(address token) external view returns (uint256) {
+    // Returns the STABLECOIN price in $
+    function stablecoinPrice(address token) external view returns (uint256) {
         CollateralType memory collateralType = collaterals[token];
         _checkIsLive(collateralType.live);
 
-        (, uint256 rate,,,) = vat.ilks(collateralType.ilk);
+        (, uint256 rate,,,) = ledger.ilks(collateralType.ilk);
         return rate / 10 ** 9;
     }
 
@@ -356,49 +356,49 @@ contract Interaction is Initializable, IInteraction {
         CollateralType memory collateralType = collaterals[token];
         _checkIsLive(collateralType.live);
 
-        (,uint256 mat) = spotter.ilks(collateralType.ilk);
-        require(mat != 0, "Interaction/spot-not-init");
+        (,uint256 mat) = vision.ilks(collateralType.ilk);
+        require(mat != 0, "Interaction/vision-not-init");
         return 10 ** 45 / mat;
     }
 
-    // Total aMATICc deposited nominated in $
+    // Total collateral deposited nominated in $
     function depositTVL(address token) external view returns (uint256) {
         return deposits[token] * collateralPrice(token) / WAD;
     }
 
-    // Total DAVOS borrowed by all users
+    // Total STABLECOIN borrowed by all users
     function collateralTVL(address token) external view returns (uint256) {
         CollateralType memory collateralType = collaterals[token];
         _checkIsLive(collateralType.live);
 
-        (uint256 Art, uint256 rate,,,) = vat.ilks(collateralType.ilk);
+        (uint256 Art, uint256 rate,,,) = ledger.ilks(collateralType.ilk);
         return FullMath.mulDiv(Art, rate, RAY);
     }
 
-    // Not locked user balance in aMATICc
+    // Not locked user balance in collateral
     function free(address token, address usr) public view returns (uint256) {
         CollateralType memory collateralType = collaterals[token];
         _checkIsLive(collateralType.live);
 
-        return vat.gem(collateralType.ilk, usr);
+        return ledger.gem(collateralType.ilk, usr);
     }
 
-    // User collateral in aMATICc
+    // User collateral in collateral
     function locked(address token, address usr) public view returns (uint256) {
         CollateralType memory collateralType = collaterals[token];
         _checkIsLive(collateralType.live);
 
-        (uint256 ink,) = vat.urns(collateralType.ilk, usr);
+        (uint256 ink,) = ledger.urns(collateralType.ilk, usr);
         return ink;
     }
 
-    // Total borrowed DAVOS
+    // Total borrowed STABLECOIN
     function borrowed(address token, address usr) external view returns (uint256) {
         CollateralType memory collateralType = collaterals[token];
         _checkIsLive(collateralType.live);
 
-        (,uint256 rate,,,) = vat.ilks(collateralType.ilk);
-        (, uint256 art) = vat.urns(collateralType.ilk, usr);
+        (,uint256 rate,,,) = ledger.ilks(collateralType.ilk);
+        (, uint256 art) = ledger.urns(collateralType.ilk, usr);
         
         // 100 Wei is added as a ceiling to help close CDP in repay()
         if ((art * rate) / RAY != 0) {
@@ -409,33 +409,33 @@ contract Interaction is Initializable, IInteraction {
         }
     }
 
-    // Collateral minus borrowed. Basically free collateral (nominated in DAVOS)
+    // Collateral minus borrowed. Basically free collateral (nominated in STABLECOIN)
     function availableToBorrow(address token, address usr) external view returns (int256) {
         CollateralType memory collateralType = collaterals[token];
         _checkIsLive(collateralType.live);
 
-        (uint256 ink, uint256 art) = vat.urns(collateralType.ilk, usr);
-        (, uint256 rate, uint256 spot,,) = vat.ilks(collateralType.ilk);
-        uint256 collateral = ink * spot;
+        (uint256 ink, uint256 art) = ledger.urns(collateralType.ilk, usr);
+        (, uint256 rate, uint256 vision,,) = ledger.ilks(collateralType.ilk);
+        uint256 collateral = ink * vision;
         uint256 debt = rate * art;
         return (int256(collateral) - int256(debt)) / 1e27;
     }
 
-    // Collateral + `amount` minus borrowed. Basically free collateral (nominated in DAVOS)
-    // Returns how much davos you can borrow if provide additional `amount` of collateral
+    // Collateral + `amount` minus borrowed. Basically free collateral (nominated in STABLECOIN)
+    // Returns how much stablecoin you can borrow if provide additional `amount` of collateral
     function willBorrow(address token, address usr, int256 amount) external view returns (int256) {
         CollateralType memory collateralType = collaterals[token];
         _checkIsLive(collateralType.live);
 
-        (uint256 ink, uint256 art) = vat.urns(collateralType.ilk, usr);
-        (, uint256 rate, uint256 spot,,) = vat.ilks(collateralType.ilk);
+        (uint256 ink, uint256 art) = ledger.urns(collateralType.ilk, usr);
+        (, uint256 rate, uint256 vision,,) = ledger.ilks(collateralType.ilk);
         require(amount >= - (int256(ink)), "Cannot withdraw more than current amount");
         if (amount < 0) {
             ink = uint256(int256(ink) + amount);
         } else {
             ink += uint256(amount);
         }
-        uint256 collateral = ink * spot;
+        uint256 collateral = ink * vision;
         uint256 debt = rate * art;
         return (int256(collateral) - int256(debt)) / 1e27;
     }
@@ -444,27 +444,27 @@ contract Interaction is Initializable, IInteraction {
         if (ink == 0) {
             return 0; // no meaningful price if user has no debt
         }
-        (, uint256 rate,,,) = vat.ilks(ilk);
-        (,uint256 mat) = spotter.ilks(ilk);
+        (, uint256 rate,,,) = ledger.ilks(ilk);
+        (,uint256 mat) = vision.ilks(ilk);
         uint256 backedDebt = (art * rate / 10 ** 36) * mat;
         return backedDebt / ink;
     }
 
-    // Price of aMATICc when user will be liquidated
+    // Price of collateral when user will be liquidated
     function currentLiquidationPrice(address token, address usr) external view returns (uint256) {
         CollateralType memory collateralType = collaterals[token];
         _checkIsLive(collateralType.live);
 
-        (uint256 ink, uint256 art) = vat.urns(collateralType.ilk, usr);
+        (uint256 ink, uint256 art) = ledger.urns(collateralType.ilk, usr);
         return liquidationPriceForDebt(collateralType.ilk, ink, art);
     }
 
-    // Price of aMATICc when user will be liquidated with additional amount of aMATICc deposited/withdraw
+    // Price of collateral when user will be liquidated with additional amount of collateral deposited/withdraw
     function estimatedLiquidationPrice(address token, address usr, int256 amount) external view returns (uint256) {
         CollateralType memory collateralType = collaterals[token];
         _checkIsLive(collateralType.live);
 
-        (uint256 ink, uint256 art) = vat.urns(collateralType.ilk, usr);
+        (uint256 ink, uint256 art) = ledger.urns(collateralType.ilk, usr);
         require(amount >= - (int256(ink)), "Cannot withdraw more than current amount");
         if (amount < 0) {
             ink = uint256(int256(ink) + amount);
@@ -474,16 +474,16 @@ contract Interaction is Initializable, IInteraction {
         return liquidationPriceForDebt(collateralType.ilk, ink, art);
     }
 
-    // Price of aMATICc when user will be liquidated with additional amount of DAVOS borrowed/payback
-    //positive amount mean DAVOSs are being borrowed. So art(debt) will increase
-    function estimatedLiquidationPriceDAVOS(address token, address usr, int256 amount) external view returns (uint256) {
+    // Price of collateral when user will be liquidated with additional amount of STABLECOIN borrowed/payback
+    //positive amount mean STABLECOINs are being borrowed. So art(debt) will increase
+    function estimatedLiquidationPriceSTABLECOIN(address token, address usr, int256 amount) external view returns (uint256) {
         CollateralType memory collateralType = collaterals[token];
         _checkIsLive(collateralType.live);
 
-        (uint256 ink, uint256 art) = vat.urns(collateralType.ilk, usr);
+        (uint256 ink, uint256 art) = ledger.urns(collateralType.ilk, usr);
         require(amount >= - (int256(art)), "Cannot withdraw more than current amount");
-        (, uint256 rate,,,) = vat.ilks(collateralType.ilk);
-        (,uint256 mat) = spotter.ilks(collateralType.ilk);
+        (, uint256 rate,,,) = ledger.ilks(collateralType.ilk);
+        (,uint256 mat) = vision.ilks(collateralType.ilk);
         uint256 backedDebt = FullMath.mulDiv(art, rate, 10 ** 36);
         if (amount < 0) {
             backedDebt = uint256(int256(backedDebt) + amount);
@@ -499,8 +499,8 @@ contract Interaction is Initializable, IInteraction {
         CollateralType memory collateralType = collaterals[token];
         _checkIsLive(collateralType.live);
 
-        (uint256 duty,) = jug.ilks(collateralType.ilk);
-        uint256 principal = dMath.rpow((jug.base() + duty), YEAR, RAY);
+        (uint256 duty,) = fee.ilks(collateralType.ilk);
+        uint256 principal = dMath.rpow((fee.base() + duty), YEAR, RAY);
         return (principal - RAY) / (10 ** 7);
     }
 
@@ -510,15 +510,15 @@ contract Interaction is Initializable, IInteraction {
         address keeper
     ) external returns (uint256) {
         CollateralType memory collateral = collaterals[token];
-        (uint256 ink,) = vat.urns(collateral.ilk, user);
-        IDavosProvider provider = IDavosProvider(davosProviders[token]);
+        (uint256 ink,) = ledger.urns(collateral.ilk, user);
+        IProvider provider = IProvider(providers[token]);
         uint256 auctionAmount = AuctionProxy.startAuction(
             user,
             keeper,
-            davos,
-            davosJoin,
-            vat,
-            DogLike(dog),
+            stablecoin,
+            stablecoinJoin,
+            ledger,
+            LiquidatorLike(liquidator),
             provider,
             collateral
         );
@@ -535,42 +535,42 @@ contract Interaction is Initializable, IInteraction {
         address receiverAddress
     ) external {
         CollateralType memory collateral = collaterals[token];
-        IDavosProvider davosProvider = IDavosProvider(davosProviders[token]);
+        IProvider Provider = IProvider(providers[token]);
         uint256 leftover = AuctionProxy.buyFromAuction(
             auctionId,
             collateralAmount,
             maxPrice,
             receiverAddress,
-            davos,
-            davosJoin,
-            vat,
-            davosProvider,
+            stablecoin,
+            stablecoinJoin,
+            ledger,
+            Provider,
             collateral
         );
 
-        address urn = ClipperLike(collateral.clip).sales(auctionId).usr; // Liquidated address
+        address urn = JailLike(collateral.jail).sales(auctionId).usr; // Liquidated address
 
         emit Liquidation(urn, token, collateralAmount, leftover);
     }
 
     function getAuctionStatus(address token, uint256 auctionId) external view returns(bool, uint256, uint256, uint256) {
-        return ClipperLike(collaterals[token].clip).getStatus(auctionId);
+        return JailLike(collaterals[token].jail).getStatus(auctionId);
     }
 
-    function upchostClipper(address token) external {
-        ClipperLike(collaterals[token].clip).upchost();
+    function upchostJail(address token) external {
+        JailLike(collaterals[token].jail).upchost();
     }
 
     function getAllActiveAuctionsForToken(address token) external view returns (Sale[] memory sales) {
-        return AuctionProxy.getAllActiveAuctionsForClip(ClipperLike(collaterals[token].clip));
+        return AuctionProxy.getAllActiveAuctionsForJail(JailLike(collaterals[token].jail));
     }
 
     function resetAuction(address token, uint256 auctionId, address keeper) external {
-        AuctionProxy.resetAuction(auctionId, keeper, davos, davosJoin, vat, collaterals[token]);
+        AuctionProxy.resetAuction(auctionId, keeper, stablecoin, stablecoinJoin, ledger, collaterals[token]);
     }
 
     function totalPegLiquidity() external view returns (uint256) {
-        return IERC20(davos).totalSupply();
+        return IERC20(stablecoin).totalSupply();
     }
 
     function _checkIsLive(uint256 live) internal pure {

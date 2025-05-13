@@ -1,22 +1,4 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-
-/// jar.sol -- Davos distribution farming
-
-// Copyright (C) 2022
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
 pragma solidity ^0.8.10;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -26,12 +8,13 @@ import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol
 
 /*
    "Put rewards in the jar and close it".
-   This contract lets you deposit DAVOSs from davos.sol and earn
-   DAVOS rewards. The DAVOS rewards are deposited into this contract
+   This contract lets you deposit STABLECOINs from stablecoin.sol and earn
+   STABLECOIN rewards. The STABLECOIN rewards are deposited into this contract
    and distributed over a timeline. Users can redeem rewards
    after exit delay.
 */
 
+// --- jar.sol --- Farming Distribution
 contract Jar is Initializable, ReentrancyGuardUpgradeable {
     // --- Wrapper ---
     using SafeERC20 for IERC20;
@@ -56,13 +39,13 @@ contract Jar is Initializable, ReentrancyGuardUpgradeable {
     uint public spread;          // Distribution time     [sec]
     uint public endTime;         // Time "now" + spread   [sec]
     uint public rate;            // Emission per second   [wad]
-    uint public tps;             // DAVOS tokens per share  [wad]
+    uint public tps;             // tokens per share      [wad]
     uint public lastUpdate;      // Last tps update       [sec]
     uint public exitDelay;       // User unstake delay    [sec]
     uint public flashLoanDelay;  // Anti flash loan time  [sec]
-    address public DAVOS;        // The DAVOS Stable Coin
+    address public STABLECOIN;   // The STABLECOIN Stable Coin
 
-    mapping(address => uint) public tpsPaid;      // DAVOS per share paid
+    mapping(address => uint) public tpsPaid;      // STABLECOIN per share paid
     mapping(address => uint) public rewards;      // Accumulated rewards
     mapping(address => uint) public withdrawn;    // Capital withdrawn
     mapping(address => uint) public unstakeTime;  // Time of Unstake
@@ -89,13 +72,13 @@ contract Jar is Initializable, ReentrancyGuardUpgradeable {
     constructor() { _disableInitializers(); }
 
     // --- Init ---
-    function initialize(string memory _name, string memory _symbol, address _davosToken, uint _spread, uint _exitDelay, uint _flashLoanDelay) external initializer {
+    function initialize(string memory _name, string memory _symbol, address _stablecoinToken, uint _spread, uint _exitDelay, uint _flashLoanDelay) external initializer {
         __ReentrancyGuard_init();
         wards[msg.sender] = 1;
         decimals = 18;
         name = _name;
         symbol = _symbol;
-        DAVOS = _davosToken;
+        STABLECOIN = _stablecoinToken;
         spread = _spread;
         exitDelay = _exitDelay;
         flashLoanDelay = _flashLoanDelay;
@@ -152,7 +135,7 @@ contract Jar is Initializable, ReentrancyGuardUpgradeable {
         lastUpdate = block.timestamp;
         endTime = block.timestamp + timeline;
 
-        IERC20(DAVOS).safeTransferFrom(msg.sender, address(this), wad);
+        IERC20(STABLECOIN).safeTransferFrom(msg.sender, address(this), wad);
         emit Replenished(wad);
     }
     function setSpread(uint _spread) external authOrOperator {
@@ -174,9 +157,9 @@ contract Jar is Initializable, ReentrancyGuardUpgradeable {
     }
     function extractDust() external auth {
         require(block.timestamp >= endTime, "Jar/in-distribution");
-        uint dust = IERC20(DAVOS).balanceOf(address(this)) - totalSupply;
+        uint dust = IERC20(STABLECOIN).balanceOf(address(this)) - totalSupply;
         if (dust != 0) {
-            IERC20(DAVOS).safeTransfer(msg.sender, dust);
+            IERC20(STABLECOIN).safeTransfer(msg.sender, dust);
         }
     }
     function cage() external auth {
@@ -197,7 +180,7 @@ contract Jar is Initializable, ReentrancyGuardUpgradeable {
         totalSupply += wad;
         stakeTime[msg.sender] = block.timestamp + flashLoanDelay;
 
-        IERC20(DAVOS).safeTransferFrom(msg.sender, address(this), wad);
+        IERC20(STABLECOIN).safeTransferFrom(msg.sender, address(this), wad);
         emit Join(msg.sender, wad);
     }
     function exit(uint256 wad) external update(msg.sender) nonReentrant {
@@ -234,7 +217,7 @@ contract Jar is Initializable, ReentrancyGuardUpgradeable {
             if (_amount > 0) {
                 rewards[accounts[i]] = 0;
                 withdrawn[accounts[i]] = 0;
-                IERC20(DAVOS).safeTransfer(accounts[i], _amount);
+                IERC20(STABLECOIN).safeTransfer(accounts[i], _amount);
             }
         }
        

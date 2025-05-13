@@ -17,7 +17,7 @@ async function main() {
     let { _swapBurn_router, _swapBurn__permit2, _swapBurn_priceFeed, _swapBurn_tokenOut, _swapBurn_fee, _swapBurn_tickSpacing, _swapBurn_deadline, _swapBurn_slippage, _swapBurn_yieldModule } = require(`./configs/${hre.network.name}.json`);
 
     // Addresses
-    let { _vow } = require(`../protocol/addresses/${hre.network.name}_1.json`);
+    let { _settlement } = require(`../protocol/addresses/${hre.network.name}_1.json`);
 
     // Fetching
     this.SwapBurn = await hre.ethers.getContractFactory("SwapBurn");
@@ -26,7 +26,7 @@ async function main() {
     // Deployment
     console.log("Module...");
 
-    let swapBurn = await upgrades.deployProxy(this.SwapBurn, [_vow, _swapBurn_router, _swapBurn__permit2, _swapBurn_priceFeed], {initializer: "initialize", nonce: _nonce}); _nonce += 1;
+    let swapBurn = await upgrades.deployProxy(this.SwapBurn, [_settlement, _swapBurn_router, _swapBurn__permit2, _swapBurn_priceFeed], {initializer: "initialize", nonce: _nonce}); _nonce += 1;
     await swapBurn.deployed();
     swapBurnImp = await upgrades.erc1967.getImplementationAddress(swapBurn.address);
     console.log("SwapBurn        :", swapBurn.address);

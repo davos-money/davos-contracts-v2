@@ -18,21 +18,21 @@ describe('===GemJoin===', function () {
 
         // Contract factory
         this.GemJoin = await ethers.getContractFactory("GemJoin");
-        this.Vat = await ethers.getContractFactory("Vat");
-        this.Davos = await ethers.getContractFactory("Davos");
+        this.Ledger = await ethers.getContractFactory("Ledger");
+        this.Stablecoin = await ethers.getContractFactory("Stablecoin");
 
         // Contract deployment
-        vat = await upgrades.deployProxy(this.Vat, [], {initializer: "initialize"});
-        await vat.deployed();
-        gem = await upgrades.deployProxy(this.Davos, [97, "GEM", "100" + wad], {initializer: "initialize"});
+        ledger = await upgrades.deployProxy(this.Ledger, [], {initializer: "initialize"});
+        await ledger.deployed();
+        gem = await upgrades.deployProxy(this.Stablecoin, [97, "GEM", "100" + wad], {initializer: "initialize"});
         await gem.deployed();
-        gemjoin = await upgrades.deployProxy(this.GemJoin, [vat.address, collateral, gem.address], {initializer: "initialize"});
+        gemjoin = await upgrades.deployProxy(this.GemJoin, [ledger.address, collateral, gem.address], {initializer: "initialize"});
         await gemjoin.deployed();
     });
 
     describe('--- initialize()', function () {
         it('initialize', async function () {
-            expect(await gemjoin.vat()).to.be.equal(vat.address);
+            expect(await gemjoin.ledger()).to.be.equal(ledger.address);
         });
     });
     describe('--- rely()', function () {
@@ -72,31 +72,31 @@ describe('===GemJoin===', function () {
         it('reverts: GemJoin/overflow', async function () {
             await expect(gemjoin.join(deployer.address, "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")).to.be.revertedWith("GemJoin/overflow");
         });
-        it('joins davos erc20', async function () {
+        it('joins stablecoin erc20', async function () {
             await gem.mint(deployer.address, "1" + wad);
             await gem.approve(gemjoin.address, "1" + wad);
-            await vat.rely(gemjoin.address);
+            await ledger.rely(gemjoin.address);
             await gem.rely(gemjoin.address);
 
             await gemjoin.join(deployer.address, "1" + wad);
-            expect(await vat.gem(collateral, deployer.address)).to.be.equal("1" + wad);
+            expect(await ledger.gem(collateral, deployer.address)).to.be.equal("1" + wad);
         });
     });
     describe('--- exit()', function () {
         it('reverts: GemJoin/overflow', async function () {
             await expect(gemjoin.exit(deployer.address, "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")).to.be.revertedWith("GemJoin/overflow");
         });
-        it('exits davos erc20', async function () {
+        it('exits stablecoin erc20', async function () {
             await gem.mint(deployer.address, "1" + wad);
             await gem.approve(gemjoin.address, "1" + wad);
-            await vat.rely(gemjoin.address);
+            await ledger.rely(gemjoin.address);
             await gem.rely(gemjoin.address);
 
             await gemjoin.join(deployer.address, "1" + wad);
-            expect(await vat.gem(collateral, deployer.address)).to.be.equal("1" + wad);
+            expect(await ledger.gem(collateral, deployer.address)).to.be.equal("1" + wad);
 
             await gemjoin.exit(deployer.address, "1" + wad);
-            expect(await vat.gem(collateral, deployer.address)).to.be.equal("0");
+            expect(await ledger.gem(collateral, deployer.address)).to.be.equal("0");
         });
     });
     describe('--- uncage()', function () {
@@ -107,7 +107,7 @@ describe('===GemJoin===', function () {
         });
     });
 });
-describe('===DavosJoin===', function () {
+describe('===StablecoinJoin===', function () {
     let deployer, signer1, signer2;
 
     let wad = "000000000000000000", // 18 Decimals
@@ -123,105 +123,105 @@ describe('===DavosJoin===', function () {
         [deployer, signer1, signer2] = await ethers.getSigners();
 
         // Contract factory
-        this.DavosJoin = await ethers.getContractFactory("DavosJoin");
-        this.Vat = await ethers.getContractFactory("Vat");
-        this.Davos = await ethers.getContractFactory("Davos");
+        this.StablecoinJoin = await ethers.getContractFactory("StablecoinJoin");
+        this.Ledger = await ethers.getContractFactory("Ledger");
+        this.Stablecoin = await ethers.getContractFactory("Stablecoin");
 
         // Contract deployment
-        vat = await upgrades.deployProxy(this.Vat, [], {initializer: "initialize"});
-        await vat.deployed();
-        davos = await upgrades.deployProxy(this.Davos, [97, "DAVOS", "100" + wad], {initializer: "initialize"});
-        await davos.deployed();
-        davosjoin = await upgrades.deployProxy(this.DavosJoin, [vat.address, davos.address], {initializer: "initialize"});
-        await davosjoin.deployed();
+        ledger = await upgrades.deployProxy(this.Ledger, [], {initializer: "initialize"});
+        await ledger.deployed();
+        stablecoin = await upgrades.deployProxy(this.Stablecoin, [97, "STABLECOIN", "100" + wad], {initializer: "initialize"});
+        await stablecoin.deployed();
+        stablecoinjoin = await upgrades.deployProxy(this.StablecoinJoin, [ledger.address, stablecoin.address], {initializer: "initialize"});
+        await stablecoinjoin.deployed();
     });
 
     describe('--- initialize()', function () {
         it('initialize', async function () {
-            expect(await davosjoin.vat()).to.be.equal(vat.address);
+            expect(await stablecoinjoin.ledger()).to.be.equal(ledger.address);
         });
     });
     describe('--- rely()', function () {
-        it('reverts: DavosJoin/not-authorized', async function () {
-            await davosjoin.deny(deployer.address);
-            await expect(davosjoin.rely(signer1.address)).to.be.revertedWith("DavosJoin/not-authorized");
-            expect(await davosjoin.wards(signer1.address)).to.be.equal("0");
+        it('reverts: StablecoinJoin/not-authorized', async function () {
+            await stablecoinjoin.deny(deployer.address);
+            await expect(stablecoinjoin.rely(signer1.address)).to.be.revertedWith("StablecoinJoin/not-authorized");
+            expect(await stablecoinjoin.wards(signer1.address)).to.be.equal("0");
         });
         it('relies on address', async function () {
-            await davosjoin.rely(signer1.address);
-            expect(await davosjoin.wards(signer1.address)).to.be.equal("1");
+            await stablecoinjoin.rely(signer1.address);
+            expect(await stablecoinjoin.wards(signer1.address)).to.be.equal("1");
         });
     });
     describe('--- deny()', function () {
-        it('reverts: DavosJoin/not-authorized', async function () {
-            await davosjoin.deny(deployer.address);
-            await expect(davosjoin.deny(signer1.address)).to.be.revertedWith("DavosJoin/not-authorized");
+        it('reverts: StablecoinJoin/not-authorized', async function () {
+            await stablecoinjoin.deny(deployer.address);
+            await expect(stablecoinjoin.deny(signer1.address)).to.be.revertedWith("StablecoinJoin/not-authorized");
         });
         it('denies an address', async function () {
-            await davosjoin.rely(signer1.address);
-            expect(await davosjoin.wards(signer1.address)).to.be.equal("1");
-            await davosjoin.deny(signer1.address);
-            expect(await davosjoin.wards(signer1.address)).to.be.equal("0");
+            await stablecoinjoin.rely(signer1.address);
+            expect(await stablecoinjoin.wards(signer1.address)).to.be.equal("1");
+            await stablecoinjoin.deny(signer1.address);
+            expect(await stablecoinjoin.wards(signer1.address)).to.be.equal("0");
         });
     });
     describe('--- cage()', function () {
         it('cages', async function () {
-            await davosjoin.cage();
-            expect(await davosjoin.live()).to.be.equal("0");
+            await stablecoinjoin.cage();
+            expect(await stablecoinjoin.live()).to.be.equal("0");
         });
     });
     describe('--- join()', function () {
-        it('joins davos erc20', async function () {
-            await vat.init(collateral);
-            await vat.rely(davosjoin.address);
-            await davos.rely(davosjoin.address);
-            await vat.hope(davosjoin.address);
+        it('joins stablecoin erc20', async function () {
+            await ledger.init(collateral);
+            await ledger.rely(stablecoinjoin.address);
+            await stablecoin.rely(stablecoinjoin.address);
+            await ledger.hope(stablecoinjoin.address);
 
-            await vat.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("spot"), "100" + ray);
+            await ledger.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("vision"), "100" + ray);
 
-            await vat.slip(collateral, deployer.address, "1" + wad);
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, 0, "15" + wad);
-            await davosjoin.exit(deployer.address, "1" + wad);
+            await ledger.slip(collateral, deployer.address, "1" + wad);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, 0, "15" + wad);
+            await stablecoinjoin.exit(deployer.address, "1" + wad);
 
-            await davos.approve(davosjoin.address, "1" + wad);
+            await stablecoin.approve(stablecoinjoin.address, "1" + wad);
             
-            await davosjoin.join(deployer.address, "1" + wad);
-            expect(await vat.davos(deployer.address)).to.be.equal("15" + rad);
+            await stablecoinjoin.join(deployer.address, "1" + wad);
+            expect(await ledger.stablecoin(deployer.address)).to.be.equal("15" + rad);
         });
     });
     describe('--- exit()', function () {
-        it('reverts: DavosJoin/not-live', async function () {
-            await davosjoin.cage();
-            await expect(davosjoin.exit(deployer.address, "1" + wad)).to.be.revertedWith("DavosJoin/not-live");
+        it('reverts: StablecoinJoin/not-live', async function () {
+            await stablecoinjoin.cage();
+            await expect(stablecoinjoin.exit(deployer.address, "1" + wad)).to.be.revertedWith("StablecoinJoin/not-live");
         });
-        it('exits davos erc20', async function () {
-            await vat.init(collateral);
-            await vat.rely(davosjoin.address);
-            await davos.rely(davosjoin.address);
-            await vat.hope(davosjoin.address);
+        it('exits stablecoin erc20', async function () {
+            await ledger.init(collateral);
+            await ledger.rely(stablecoinjoin.address);
+            await stablecoin.rely(stablecoinjoin.address);
+            await ledger.hope(stablecoinjoin.address);
 
-            await vat.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("spot"), "100" + ray);
+            await ledger.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("vision"), "100" + ray);
 
-            await vat.slip(collateral, deployer.address, "1" + wad);
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, 0, "15" + wad);
-            await davosjoin.exit(signer1.address, "1" + wad);
+            await ledger.slip(collateral, deployer.address, "1" + wad);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, 0, "15" + wad);
+            await stablecoinjoin.exit(signer1.address, "1" + wad);
 
-            expect(await davos.balanceOf(signer1.address)).to.be.equal("1" + wad);
+            expect(await stablecoin.balanceOf(signer1.address)).to.be.equal("1" + wad);
         });
     });
     describe('--- uncage()', function () {
         it('uncages previouly caged', async function () {
-            await davosjoin.cage();
-            await davosjoin.uncage();
-            expect(await davosjoin.live()).to.be.equal(1);
+            await stablecoinjoin.cage();
+            await stablecoinjoin.uncage();
+            expect(await stablecoinjoin.live()).to.be.equal(1);
         });
     });
 });

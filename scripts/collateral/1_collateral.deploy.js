@@ -17,15 +17,15 @@ async function main() {
     let { _underlying, _ilk} = require(`./configs/${hre.network.name}.json`);
 
     // Addresses
-    let { _vat, _spot, _dog } = require(`../protocol/addresses/${hre.network.name}_1.json`);
+    let { _ledger, _vision, _liquidator } = require(`../protocol/addresses/${hre.network.name}_1.json`);
     let { _interaction } = require(`../protocol/addresses/${hre.network.name}_2.json`);
 
     // Fetching
     this.MasterVault = await hre.ethers.getContractFactory("MasterVault");
-    this.DavosProvider = await hre.ethers.getContractFactory("DavosProvider");
+    this.Provider = await hre.ethers.getContractFactory("Provider");
     this.DCol = await hre.ethers.getContractFactory("dCol");
     this.GemJoin = await hre.ethers.getContractFactory("GemJoin");
-    this.Clip = await hre.ethers.getContractFactory("Clipper");
+    this.Jail = await hre.ethers.getContractFactory("Jail");
 
     // Deployment
     console.log("Deploying...");
@@ -42,23 +42,23 @@ async function main() {
     console.log("DCol           : " + DCol.address);
     console.log("imp              : " + DColImp);
 
-    let davosProvider = await upgrades.deployProxy(this.DavosProvider, [_underlying, DCol.address, masterVault.address, _interaction, false], {initializer: "initialize", nonce: _nonce}); _nonce += 1
-    await davosProvider.deployed();
-    let davosProviderImp = await upgrades.erc1967.getImplementationAddress(davosProvider.address);
-    console.log("DavosProvider    : " + davosProvider.address);
-    console.log("imp              : " + davosProviderImp);
+    let Provider = await upgrades.deployProxy(this.Provider, [_underlying, DCol.address, masterVault.address, _interaction, false], {initializer: "initialize", nonce: _nonce}); _nonce += 1
+    await Provider.deployed();
+    let ProviderImp = await upgrades.erc1967.getImplementationAddress(Provider.address);
+    console.log("Provider    : " + Provider.address);
+    console.log("imp              : " + ProviderImp);
 
-    let gemJoin = await upgrades.deployProxy(this.GemJoin, [_vat, _ilk, masterVault.address], {initializer: "initialize", nonce: _nonce}); _nonce += 1;
+    let gemJoin = await upgrades.deployProxy(this.GemJoin, [_ledger, _ilk, masterVault.address], {initializer: "initialize", nonce: _nonce}); _nonce += 1;
     await gemJoin.deployed();
     let gemJoinImp = await upgrades.erc1967.getImplementationAddress(gemJoin.address);
     console.log("GemJoin          :", gemJoin.address);
     console.log("Imp              :", gemJoinImp);
 
-    let clip = await upgrades.deployProxy(this.Clip, [_vat, _spot, _dog, _ilk], {initializer: "initialize", nonce: _nonce}); _nonce += 1;
-    await clip.deployed();
-    let clipImp = await upgrades.erc1967.getImplementationAddress(clip.address);
-    console.log("Clip             :", clip.address);
-    console.log("Imp              :", clipImp);
+    let jail = await upgrades.deployProxy(this.Jail, [_ledger, _vision, _liquidator, _ilk], {initializer: "initialize", nonce: _nonce}); _nonce += 1;
+    await jail.deployed();
+    let jailImp = await upgrades.erc1967.getImplementationAddress(jail.address);
+    console.log("Jail             :", jail.address);
+    console.log("Imp              :", jailImp);
 
     // Store Deployed Contracts
     const addresses = {
@@ -66,12 +66,12 @@ async function main() {
         _masterVaultImp  : masterVaultImp,
         _DCol          : DCol.address,
         _DColImp       : DColImp,
-        _davosProvider   : davosProvider.address,
-        _davosProviderImp: davosProviderImp,
+        _Provider   : Provider.address,
+        _ProviderImp: ProviderImp,
         _gemJoin         : gemJoin.address,
         _gemJoinImp      : gemJoinImp,
-        _clip            : clip.address,
-        _clipImp         : clipImp,
+        _jail            : jail.address,
+        _jailImp         : jailImp,
         _initialNonce    : initialNonce
     }
 

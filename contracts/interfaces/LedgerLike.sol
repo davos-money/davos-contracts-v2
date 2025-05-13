@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.10;
 
-interface VatLike {
+interface LedgerLike {
     function init(bytes32 ilk) external;
 
     function hope(address usr) external;
@@ -26,7 +26,7 @@ interface VatLike {
 
     function gem(bytes32, address) external view returns (uint256);
 
-    function davos(address) external view returns (uint256);
+    function stablecoin(address) external view returns (uint256);
 
     function urns(bytes32, address) external view returns (uint256, uint256);
 

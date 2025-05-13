@@ -23,7 +23,7 @@ describe('===MasterVault===', function () {
         mv = await upgrades.deployProxy(this.MasterVault_V2, ["Master Vault Token", "ceMATIC", token.address], {initializer: "initialize"});
         await mv.deployed();
 
-        await mv.changeDavosProvider(signer1.address);
+        await mv.changeProvider(signer1.address);
     });
 
     describe('--- deposit', function () {
@@ -128,15 +128,15 @@ describe('===MasterVault===', function () {
         })
     });
 
-    describe('--- changeDavosProvider', function () {
+    describe('--- changeProvider', function () {
 
         it('reverts: new provider is 0', async () => {
-            await expect(mv.changeDavosProvider(NULL_ADDRESS)).to.be.revertedWith("ZeroAddress()");
+            await expect(mv.changeProvider(NULL_ADDRESS)).to.be.revertedWith("ZeroAddress()");
         })
-        it('changeDavosProvider', async () => {
-            expect(await mv.davosProvider()).to.be.eq(signer1.address);
-            await mv.changeDavosProvider(signer2.address);
-            expect(await mv.davosProvider()).to.be.eq(signer2.address);
+        it('changeProvider', async () => {
+            expect(await mv.Provider()).to.be.eq(signer1.address);
+            await mv.changeProvider(signer2.address);
+            expect(await mv.Provider()).to.be.eq(signer2.address);
         })
     });
 });

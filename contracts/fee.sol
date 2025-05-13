@@ -1,42 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-
-/// jug.sol -- Davos Lending Rate
-
-// Copyright (C) 2018 Rain <rainbreak@riseup.net>
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
+// Modified version of MakerDAO (https://github.com/makerdao/dss/blob/master/src/jug.sol)
 pragma solidity ^0.8.10;
 
-// FIXME: This contract was altered compared to the production version.
-// It doesn't use LibNote anymore.
-// New deployments of this contract will need to include custom events (TO DO).
-
 import "./dMath.sol";
-import "./interfaces/JugLike.sol";
-import "./interfaces/VatLike.sol";
-import "./interfaces/DavosJoinLike.sol";
+import "./interfaces/FeeLike.sol";
+import "./interfaces/LedgerLike.sol";
+import "./interfaces/StablecoinJoinLike.sol";
 import "./masterVault/interfaces/ILicensor.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract Jug is Initializable, JugLike {
+// --- fee.sol --- Lending Fee
+contract Fee is Initializable, FeeLike {
     // --- Auth ---
     mapping (address => uint) public wards;
     function rely(address usr) external auth { wards[usr] = 1; }
     function deny(address usr) external auth { wards[usr] = 0; }
     modifier auth {
-        require(wards[msg.sender] == 1, "Jug/not-authorized");
+        require(wards[msg.sender] == 1, "Fee/not-authorized");
         _;
     }
 
@@ -47,20 +27,20 @@ contract Jug is Initializable, JugLike {
     }
 
     mapping (bytes32 => Ilk) public ilks;
-    VatLike                  public vat;       // CDP Engine
-    address                  public vow;       // Debt Engine
-    uint256                  public base;      // Global, per-second stability fee contribution [ray]
-    address                  public davosJoin; // Stablecoin minter
-    address                  public licensor;  // Royalty receiver
+    LedgerLike               public ledger;          // CDP Engine
+    address                  public settlement;      // Debt Engine
+    uint256                  public base;            // Global, per-second stability fee contribution [ray]
+    address                  public stablecoinJoin;  // Stablecoin minter
+    address                  public licensor;        // Royalty receiver
 
     event File(bytes32 indexed what, uint256 data);
     event File(bytes32 indexed what, address data);
     event File(bytes32 indexed ilk, bytes32 indexed what, uint256 data);
 
     // --- Init ---
-    function initialize(address vat_) external initializer {
+    function initialize(address ledger_) external initializer {
         wards[msg.sender] = 1;
-        vat = VatLike(vat_);
+        ledger = LedgerLike(ledger_);
     }
 
     // --- Math ---
@@ -91,60 +71,60 @@ contract Jug is Initializable, JugLike {
     // --- Administration ---
     function init(bytes32 ilk) external auth {
         Ilk storage i = ilks[ilk];
-        require(i.duty == 0, "Jug/ilk-already-init");
+        require(i.duty == 0, "Fee/ilk-already-init");
         i.duty = dMath.ONE;
         i.rho  = block.timestamp;
     }
     function file(bytes32 ilk, bytes32 what, uint data) external auth {
-        require(block.timestamp == ilks[ilk].rho, "Jug/rho-not-updated");
+        require(block.timestamp == ilks[ilk].rho, "Fee/rho-not-updated");
         if (what == "duty") ilks[ilk].duty = data;
-        else revert("Jug/file-unrecognized-param");
+        else revert("Fee/file-unrecognized-param");
         emit File(ilk, what, data);
         
     }
     function file(bytes32 what, uint data) external auth {
         if (what == "base") base = data;
-        else revert("Jug/file-unrecognized-param");
+        else revert("Fee/file-unrecognized-param");
         emit File(what, data);
     }
     function file(bytes32 what, address data) external auth {
-        if (what == "vow") vow = data;
-        else if (what == "davosJoin") {
-            vat.nope(davosJoin);
-            davosJoin = data;
-            vat.hope(data);
+        if (what == "settlement") settlement = data;
+        else if (what == "stablecoinJoin") {
+            ledger.nope(stablecoinJoin);
+            stablecoinJoin = data;
+            ledger.hope(data);
         }
         else if (what == "licensor") licensor = data;
-        else revert("Jug/file-unrecognized-param");
+        else revert("Fee/file-unrecognized-param");
         emit File(what, data);
     }
 
     // --- Stability Fee Collection ---
     function drip(bytes32 ilk) external returns (uint rate) {
 
-        require(block.timestamp >= ilks[ilk].rho, "Jug/invalid-now");
-        (, uint prev,,,) = vat.ilks(ilk);
+        require(block.timestamp >= ilks[ilk].rho, "Fee/invalid-now");
+        (, uint prev,,,) = ledger.ilks(ilk);
         rate = _rmul(dMath.rpow(_add(base, ilks[ilk].duty), block.timestamp - ilks[ilk].rho, dMath.ONE), prev);
 
         int256 foldValue = _diff(rate, prev);
 
         if (foldValue < 0 || licensor == address(0)) {
-            vat.fold(ilk, vow, foldValue);
+            ledger.fold(ilk, settlement, foldValue);
         }
         else {
-            uint256 x = vat.davos(address(this));
-            vat.fold(ilk, address(this), foldValue);
-            uint256 y = vat.davos(address(this)) - x;
+            uint256 x = ledger.stablecoin(address(this));
+            ledger.fold(ilk, address(this), foldValue);
+            uint256 y = ledger.stablecoin(address(this)) - x;
 
             uint256 royaltyMargin = ILicensor(licensor).sRoyaltyMargin();
             uint256 maxMargin = ILicensor(licensor).MAX_ROYALTY_MARGIN();
 
             uint256 royalty = y * royaltyMargin / maxMargin;
 
-            vat.move(address(this), vow, y - royalty);
+            ledger.move(address(this), settlement, y - royalty);
 
             royalty = royalty / 1e27;
-            if (royalty > 0) DavosJoinLike(davosJoin).exit(licensor, royalty / 1e27);
+            if (royalty > 0) StablecoinJoinLike(stablecoinJoin).exit(licensor, royalty / 1e27);
         }
 
         ilks[ilk].rho = block.timestamp;

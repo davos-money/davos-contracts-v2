@@ -16,49 +16,49 @@ async function main() {
     let _nonce = initialNonce
 
     // Config
-    let { _vat_Line, _spot_par, _dog_Hole, _abacus_tau } = require(`./configs/${hre.network.name}.json`);
+    let { _ledger_Line, _vision_par, _liquidator_hole, _decay_tau } = require(`./configs/${hre.network.name}.json`);
 
     // Addresses
-    let { _vat, _spot, _davos, _davosJoin, _jug, _vow, _dog, _abacus } = require(`./addresses/${hre.network.name}_1.json`);
+    let { _ledger, _vision, _stablecoin, _stablecoinJoin, _fee, _settlement, _liquidator, _decay } = require(`./addresses/${hre.network.name}_1.json`);
     let { _interaction } = require(`./addresses/${hre.network.name}_2.json`);
 
     // Attaching
-    let vat = await hre.ethers.getContractAt("Vat", _vat);
-    let spot = await hre.ethers.getContractAt("Spotter", _spot);
-    let davos = await hre.ethers.getContractAt("Davos", _davos);
-    let davosJoin = await hre.ethers.getContractAt("DavosJoin", _davosJoin);
-    let jug = await hre.ethers.getContractAt("Jug", _jug);
-    let vow = await hre.ethers.getContractAt("Vow", _vow);
-    let dog = await hre.ethers.getContractAt("Dog", _dog);
-    let abacus = await hre.ethers.getContractAt("LinearDecrease", _abacus);
+    let ledger = await hre.ethers.getContractAt("Ledger", _ledger);
+    let vision = await hre.ethers.getContractAt("Vision", _vision);
+    let stablecoin = await hre.ethers.getContractAt("Stablecoin", _stablecoin);
+    let stablecoinJoin = await hre.ethers.getContractAt("StablecoinJoin", _stablecoinJoin);
+    let fee = await hre.ethers.getContractAt("Fee", _fee);
+    let settlement = await hre.ethers.getContractAt("Settlement", _settlement);
+    let liquidator = await hre.ethers.getContractAt("Liquidator", _liquidator);
+    let decay = await hre.ethers.getContractAt("LinearDecrease", _decay);
  
     let interaction = await hre.ethers.getContractAt("Interaction", _interaction);
 
-    console.log("Vat init...");
-    await vat.rely(spot.address, {nonce: _nonce}); _nonce += 1;
-    await vat.rely(davosJoin.address, {nonce: _nonce}); _nonce += 1;
-    await vat.rely(jug.address, {nonce: _nonce}); _nonce += 1;
-    await vat.rely(dog.address, {nonce: _nonce}); _nonce += 1;
-    await vat.rely(interaction.address, {nonce: _nonce}); _nonce += 1;
-    await vat["file(bytes32,uint256)"](ethers.utils.formatBytes32String("Line"), _vat_Line + rad, {nonce: _nonce}); _nonce += 1;
+    console.log("Ledger init...");
+    await ledger.rely(vision.address, {nonce: _nonce}); _nonce += 1;
+    await ledger.rely(stablecoinJoin.address, {nonce: _nonce}); _nonce += 1;
+    await ledger.rely(fee.address, {nonce: _nonce}); _nonce += 1;
+    await ledger.rely(liquidator.address, {nonce: _nonce}); _nonce += 1;
+    await ledger.rely(interaction.address, {nonce: _nonce}); _nonce += 1;
+    await ledger["file(bytes32,uint256)"](ethers.utils.formatBytes32String("Line"), _ledger_Line + rad, {nonce: _nonce}); _nonce += 1;
     
-    console.log("Davos init...");
-    await davos.rely(davosJoin.address, {nonce: _nonce}); _nonce += 1;
+    console.log("Stablecoin init...");
+    await stablecoin.rely(stablecoinJoin.address, {nonce: _nonce}); _nonce += 1;
 
-    console.log("Spot init...");
-    await spot.rely(interaction.address, {nonce: _nonce}); _nonce += 1;
-    await spot["file(bytes32,uint256)"](ethers.utils.formatBytes32String("par"), _spot_par + ray, {nonce: _nonce}); _nonce += 1; // It means pegged to 1$
+    console.log("Vision init...");
+    await vision.rely(interaction.address, {nonce: _nonce}); _nonce += 1;
+    await vision["file(bytes32,uint256)"](ethers.utils.formatBytes32String("par"), _vision_par + ray, {nonce: _nonce}); _nonce += 1; // It means pegged to 1$
 
     console.log("Joins init...");
-    await davosJoin.rely(interaction.address, {nonce: _nonce}); _nonce += 1;
-    await davosJoin.rely(vow.address, {nonce: _nonce}); _nonce += 1;
+    await stablecoinJoin.rely(interaction.address, {nonce: _nonce}); _nonce += 1;
+    await stablecoinJoin.rely(settlement.address, {nonce: _nonce}); _nonce += 1;
 
-    console.log("Dog init...");
-    await dog.rely(interaction.address, {nonce: _nonce}); _nonce += 1;
-    await dog["file(bytes32,address)"](ethers.utils.formatBytes32String("vow"), vow.address, {nonce: _nonce}); _nonce += 1;
-    await dog["file(bytes32,uint256)"](ethers.utils.formatBytes32String("Hole"), _dog_Hole + rad, {nonce: _nonce}); _nonce += 1;
+    console.log("Liquidator init...");
+    await liquidator.rely(interaction.address, {nonce: _nonce}); _nonce += 1;
+    await liquidator["file(bytes32,address)"](ethers.utils.formatBytes32String("settlement"), settlement.address, {nonce: _nonce}); _nonce += 1;
+    await liquidator["file(bytes32,uint256)"](ethers.utils.formatBytes32String("Hole"), _liquidator_hole + rad, {nonce: _nonce}); _nonce += 1;
 
-    console.log("Jug...");
+    console.log("Fee...");
     // Initialize Rates Module
     // IMPORTANT: Base and Duty are added together first, thus will compound together.
     //            It is adviced to set a constant base first then duty for all ilks.
@@ -81,16 +81,16 @@ async function main() {
     // 1000000000937303470807876290 3% Borrow Rate
     // 1000000003022266000000000000 10% Borrow Rate
     // ***We don't set base rate here. We set only duty rate via interaction***
-    // await jug["file(bytes32,uint256)"](ethers.utils.formatBytes32String("base"), "1000000000627937192491029810"); - [Avoid this if no common rate]
-    await jug.rely(interaction.address, {nonce: _nonce}); _nonce += 1;
-    await jug["file(bytes32,address)"](ethers.utils.formatBytes32String("vow"), vow.address, {nonce: _nonce}); _nonce += 1;
+    // await fee["file(bytes32,uint256)"](ethers.utils.formatBytes32String("base"), "1000000000627937192491029810"); - [Avoid this if no common rate]
+    await fee.rely(interaction.address, {nonce: _nonce}); _nonce += 1;
+    await fee["file(bytes32,address)"](ethers.utils.formatBytes32String("settlement"), settlement.address, {nonce: _nonce}); _nonce += 1;
 
-    console.log("Vow init...");
-    await vow.rely(dog.address, {nonce: _nonce}); _nonce += 1;
-    await vow["file(bytes32,address)"](ethers.utils.formatBytes32String("davos"), davos.address, {nonce: _nonce}); _nonce += 1;
+    console.log("Settlement init...");
+    await settlement.rely(liquidator.address, {nonce: _nonce}); _nonce += 1;
+    await settlement["file(bytes32,address)"](ethers.utils.formatBytes32String("stablecoin"), stablecoin.address, {nonce: _nonce}); _nonce += 1;
     
-    console.log("Abaci init...");
-    await abacus.connect(deployer)["file(bytes32,uint256)"](ethers.utils.formatBytes32String("tau"), _abacus_tau, {nonce: _nonce}); _nonce += 1; // Price will reach 0 after this time
+    console.log("decay init...");
+    await decay.connect(deployer)["file(bytes32,uint256)"](ethers.utils.formatBytes32String("tau"), _decay_tau, {nonce: _nonce}); _nonce += 1; // Price will reach 0 after this time
 
     console.log("Protocol Ready !!!");
 }

@@ -8,11 +8,10 @@ const NULL_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 const DATA = "0x02";
 
-describe('===DavosProvider===', function () {
+describe('===Provider===', function () {
     let deployer, signer1, signer2, signer3, multisig;
 
-    let davosProvider,
-        matic,
+    let Provider,
         collateralDerivative,
         masterVault,
         interaction;
@@ -41,18 +40,18 @@ describe('===DavosProvider===', function () {
         // Contract factory
         this.Token = await hre.ethers.getContractFactory("Token");
         this.DCol = await hre.ethers.getContractFactory("dCol");
-        this.DavosProvider = await hre.ethers.getContractFactory("DavosProvider");
-        this.Vat = await hre.ethers.getContractFactory("Vat");
-        this.Spot = await hre.ethers.getContractFactory("Spotter");
-        this.Davos = await hre.ethers.getContractFactory("Davos");
+        this.Provider = await hre.ethers.getContractFactory("Provider");
+        this.Ledger = await hre.ethers.getContractFactory("Ledger");
+        this.Vision = await hre.ethers.getContractFactory("Vision");
+        this.Stablecoin = await hre.ethers.getContractFactory("Stablecoin");
         this.GemJoin = await hre.ethers.getContractFactory("GemJoin");
-        this.DavosJoin = await hre.ethers.getContractFactory("DavosJoin");
+        this.StablecoinJoin = await hre.ethers.getContractFactory("StablecoinJoin");
         this.Oracle = await hre.ethers.getContractFactory("Oracle"); 
-        this.Jug = await hre.ethers.getContractFactory("Jug");
-        this.Vow = await hre.ethers.getContractFactory("Vow");
-        this.Dog = await hre.ethers.getContractFactory("Dog");
-        this.Clip = await hre.ethers.getContractFactory("Clipper");
-        this.Abacus = await hre.ethers.getContractFactory("LinearDecrease");
+        this.Fee = await hre.ethers.getContractFactory("Fee");
+        this.Settlement = await hre.ethers.getContractFactory("Settlement");
+        this.Liquidator = await hre.ethers.getContractFactory("Liquidator");
+        this.Jail = await hre.ethers.getContractFactory("Jail");
+        this.Decay = await hre.ethers.getContractFactory("LinearDecrease");
         this.AuctionProxy = await hre.ethers.getContractFactory("AuctionProxy");
         this.PriceController = await hre.ethers.getContractFactory("PriceController");
 
@@ -80,51 +79,51 @@ describe('===DavosProvider===', function () {
         await dCol.deployed();
         dColImp = await upgrades.erc1967.getImplementationAddress(dCol.address);
 
-        abacus = await upgrades.deployProxy(this.Abacus, [], {initializer: "initialize"});
-        await abacus.deployed();
-        abacusImp = await upgrades.erc1967.getImplementationAddress(abacus.address);
+        decay = await upgrades.deployProxy(this.Decay, [], {initializer: "initialize"});
+        await decay.deployed();
+        decayImp = await upgrades.erc1967.getImplementationAddress(decay.address);
 
         oracle = await this.Oracle.deploy();
         await oracle.deployed();
         await oracle.setPrice("2" + wad); // 2$
 
-        vat = await upgrades.deployProxy(this.Vat, [], {initializer: "initialize"});
-        await vat.deployed();
-        vatImp = await upgrades.erc1967.getImplementationAddress(vat.address);
+        ledger = await upgrades.deployProxy(this.Ledger, [], {initializer: "initialize"});
+        await ledger.deployed();
+        ledgerImp = await upgrades.erc1967.getImplementationAddress(ledger.address);
 
-        spot = await upgrades.deployProxy(this.Spot, [vat.address], {initializer: "initialize"});
-        await spot.deployed();
-        spotImp = await upgrades.erc1967.getImplementationAddress(spot.address);
+        vision = await upgrades.deployProxy(this.Vision, [ledger.address], {initializer: "initialize"});
+        await vision.deployed();
+        visionImp = await upgrades.erc1967.getImplementationAddress(vision.address);
 
-        davos = await upgrades.deployProxy(this.Davos, ["5", "DAVOS", "5000000" + wad], {initializer: "initialize"});
-        await davos.deployed();
-        davosImp = await upgrades.erc1967.getImplementationAddress(davos.address);
+        stablecoin = await upgrades.deployProxy(this.Stablecoin, ["5", "STABLECOIN", "5000000" + wad], {initializer: "initialize"});
+        await stablecoin.deployed();
+        stablecoinImp = await upgrades.erc1967.getImplementationAddress(stablecoin.address);
 
-        davosJoin = await upgrades.deployProxy(this.DavosJoin, [vat.address, davos.address], {initializer: "initialize"});
-        await davosJoin.deployed();
-        davosJoinImp = await upgrades.erc1967.getImplementationAddress(davosJoin.address);
+        stablecoinJoin = await upgrades.deployProxy(this.StablecoinJoin, [ledger.address, stablecoin.address], {initializer: "initialize"});
+        await stablecoinJoin.deployed();
+        stablecoinJoinImp = await upgrades.erc1967.getImplementationAddress(stablecoinJoin.address);
 
-        gemJoin = await upgrades.deployProxy(this.GemJoin, [vat.address, _ilkCeMatic, masterVault.address], {initializer: "initialize"});
+        gemJoin = await upgrades.deployProxy(this.GemJoin, [ledger.address, _ilkCeMatic, masterVault.address], {initializer: "initialize"});
         await gemJoin.deployed();
         gemJoinImp = await upgrades.erc1967.getImplementationAddress(gemJoin.address);
 
-        jug = await upgrades.deployProxy(this.Jug, [vat.address], {initializer: "initialize"});
-        await jug.deployed();
-        jugImp = await upgrades.erc1967.getImplementationAddress(jug.address);
+        fee = await upgrades.deployProxy(this.Fee, [ledger.address], {initializer: "initialize"});
+        await fee.deployed();
+        feeImp = await upgrades.erc1967.getImplementationAddress(fee.address);
 
-        vow = await upgrades.deployProxy(this.Vow, [vat.address, davosJoin.address, _multisig], {initializer: "initialize"});
-        await vow.deployed();
-        vowImp = await upgrades.erc1967.getImplementationAddress(vow.address);
+        settlement = await upgrades.deployProxy(this.Settlement, [ledger.address, stablecoinJoin.address, _multisig], {initializer: "initialize"});
+        await settlement.deployed();
+        settlementImp = await upgrades.erc1967.getImplementationAddress(settlement.address);
 
-        dog = await upgrades.deployProxy(this.Dog, [vat.address], {initializer: "initialize"});
-        await dog.deployed();
-        dogImpl = await upgrades.erc1967.getImplementationAddress(dog.address);
+        liquidator = await upgrades.deployProxy(this.Liquidator, [ledger.address], {initializer: "initialize"});
+        await liquidator.deployed();
+        liquidatorImpl = await upgrades.erc1967.getImplementationAddress(liquidator.address);
 
-        clip = await upgrades.deployProxy(this.Clip, [vat.address, spot.address, dog.address, _ilkCeMatic], {initializer: "initialize"});
-        await clip.deployed();
-        clipImp = await upgrades.erc1967.getImplementationAddress(dog.address);
+        jail = await upgrades.deployProxy(this.Jail, [ledger.address, vision.address, liquidator.address, _ilkCeMatic], {initializer: "initialize"});
+        await jail.deployed();
+        jailImp = await upgrades.erc1967.getImplementationAddress(liquidator.address);
 
-        interaction = await upgrades.deployProxy(this.Interaction, [vat.address, spot.address, davos.address, davosJoin.address, jug.address, dog.address], 
+        interaction = await upgrades.deployProxy(this.Interaction, [ledger.address, vision.address, stablecoin.address, stablecoinJoin.address, fee.address, liquidator.address], 
             {
                 initializer: "initialize",
                 unsafeAllowLinkedLibraries: true
@@ -133,83 +132,83 @@ describe('===DavosProvider===', function () {
         await interaction.deployed();
         interactionImplAddress = await upgrades.erc1967.getImplementationAddress(interaction.address);
 
-        davosProvider = await upgrades.deployProxy(this.DavosProvider, [collateralToken.address, dCol.address, masterVault.address, interaction.address, false], {initializer: "initialize"});
-        await davosProvider.deployed();
+        Provider = await upgrades.deployProxy(this.Provider, [collateralToken.address, dCol.address, masterVault.address, interaction.address, false], {initializer: "initialize"});
+        await Provider.deployed();
 
         priceController = await upgrades.deployProxy(this.PriceController, [], {initializer: "initialize"});
 
         licensor = await upgrades.deployProxy(this.Licensor, [deployer.address, 0, 0], {initializer: "initialize"});
 
         // initialize
-        await vat.rely(gemJoin.address);
-        await vat.rely(spot.address);
-        await vat.rely(davosJoin.address);
-        await vat.rely(jug.address);
-        await vat.rely(dog.address);
-        await vat.rely(clip.address);
-        await vat.rely(interaction.address);
-        await vat["file(bytes32,uint256)"](ethers.utils.formatBytes32String("Line"), "5000000" + rad);
-        await vat["file(bytes32,bytes32,uint256)"](_ilkCeMatic, ethers.utils.formatBytes32String("line"), "5000000" + rad);
-        await vat["file(bytes32,bytes32,uint256)"](_ilkCeMatic, ethers.utils.formatBytes32String("dust"), "100" + rad);
+        await ledger.rely(gemJoin.address);
+        await ledger.rely(vision.address);
+        await ledger.rely(stablecoinJoin.address);
+        await ledger.rely(fee.address);
+        await ledger.rely(liquidator.address);
+        await ledger.rely(jail.address);
+        await ledger.rely(interaction.address);
+        await ledger["file(bytes32,uint256)"](ethers.utils.formatBytes32String("Line"), "5000000" + rad);
+        await ledger["file(bytes32,bytes32,uint256)"](_ilkCeMatic, ethers.utils.formatBytes32String("line"), "5000000" + rad);
+        await ledger["file(bytes32,bytes32,uint256)"](_ilkCeMatic, ethers.utils.formatBytes32String("dust"), "100" + rad);
         
-        await davos.rely(davosJoin.address);
-        await davos.setSupplyCap("5000000" + wad);
+        await stablecoin.rely(stablecoinJoin.address);
+        await stablecoin.setSupplyCap("5000000" + wad);
         
-        await spot.rely(interaction.address);
-        await spot["file(bytes32,bytes32,address)"](_ilkCeMatic, ethers.utils.formatBytes32String("pip"), oracle.address);
-        await spot["file(bytes32,uint256)"](ethers.utils.formatBytes32String("par"), "1" + ray); // It means pegged to 1$
+        await vision.rely(interaction.address);
+        await vision["file(bytes32,bytes32,address)"](_ilkCeMatic, ethers.utils.formatBytes32String("pip"), oracle.address);
+        await vision["file(bytes32,uint256)"](ethers.utils.formatBytes32String("par"), "1" + ray); // It means pegged to 1$
                 
         await gemJoin.rely(interaction.address);
-        await davosJoin.rely(interaction.address);
-        await davosJoin.rely(vow.address);
-        await davosJoin.rely(jug.address);
+        await stablecoinJoin.rely(interaction.address);
+        await stablecoinJoin.rely(settlement.address);
+        await stablecoinJoin.rely(fee.address);
 
-        await dog.rely(interaction.address);
-        await dog.rely(clip.address);
-        await dog["file(bytes32,address)"](ethers.utils.formatBytes32String("vow"), vow.address);
-        await dog["file(bytes32,uint256)"](ethers.utils.formatBytes32String("Hole"), "50000000" + rad);
-        await dog["file(bytes32,bytes32,uint256)"](_ilkCeMatic, ethers.utils.formatBytes32String("hole"), "50000000" + rad);
-        await dog["file(bytes32,bytes32,uint256)"](_ilkCeMatic, ethers.utils.formatBytes32String("chop"), "1100000000000000000");
-        await dog["file(bytes32,bytes32,address)"](_ilkCeMatic, ethers.utils.formatBytes32String("clip"), clip.address);
+        await liquidator.rely(interaction.address);
+        await liquidator.rely(jail.address);
+        await liquidator["file(bytes32,address)"](ethers.utils.formatBytes32String("settlement"), settlement.address);
+        await liquidator["file(bytes32,uint256)"](ethers.utils.formatBytes32String("Hole"), "50000000" + rad);
+        await liquidator["file(bytes32,bytes32,uint256)"](_ilkCeMatic, ethers.utils.formatBytes32String("hole"), "50000000" + rad);
+        await liquidator["file(bytes32,bytes32,uint256)"](_ilkCeMatic, ethers.utils.formatBytes32String("chop"), "1100000000000000000");
+        await liquidator["file(bytes32,bytes32,address)"](_ilkCeMatic, ethers.utils.formatBytes32String("jail"), jail.address);
         
-        await clip.rely(interaction.address);
-        await clip.rely(dog.address);
-        await clip["file(bytes32,uint256)"](ethers.utils.formatBytes32String("buf"), "1100000000000000000000000000"); // 10%
-        await clip["file(bytes32,uint256)"](ethers.utils.formatBytes32String("tail"), "10800"); // 3H reset time
-        await clip["file(bytes32,uint256)"](ethers.utils.formatBytes32String("cusp"), "600000000000000000000000000"); // 60% reset ratio
-        await clip["file(bytes32,uint256)"](ethers.utils.formatBytes32String("chip"), "100000000000000"); // 0.01% vow incentive
-        await clip["file(bytes32,uint256)"](ethers.utils.formatBytes32String("tip"), "10" + rad); // 10$ flat incentive
-        await clip["file(bytes32,uint256)"](ethers.utils.formatBytes32String("stopped"), "0");
-        await clip["file(bytes32,address)"](ethers.utils.formatBytes32String("spotter"), spot.address);
-        await clip["file(bytes32,address)"](ethers.utils.formatBytes32String("dog"), dog.address);
-        await clip["file(bytes32,address)"](ethers.utils.formatBytes32String("vow"), vow.address);
-        await clip["file(bytes32,address)"](ethers.utils.formatBytes32String("calc"), abacus.address);
+        await jail.rely(interaction.address);
+        await jail.rely(liquidator.address);
+        await jail["file(bytes32,uint256)"](ethers.utils.formatBytes32String("buf"), "1100000000000000000000000000"); // 10%
+        await jail["file(bytes32,uint256)"](ethers.utils.formatBytes32String("tail"), "10800"); // 3H reset time
+        await jail["file(bytes32,uint256)"](ethers.utils.formatBytes32String("cusp"), "600000000000000000000000000"); // 60% reset ratio
+        await jail["file(bytes32,uint256)"](ethers.utils.formatBytes32String("chip"), "100000000000000"); // 0.01% settlement incentive
+        await jail["file(bytes32,uint256)"](ethers.utils.formatBytes32String("tip"), "10" + rad); // 10$ flat incentive
+        await jail["file(bytes32,uint256)"](ethers.utils.formatBytes32String("stopped"), "0");
+        await jail["file(bytes32,address)"](ethers.utils.formatBytes32String("vision"), vision.address);
+        await jail["file(bytes32,address)"](ethers.utils.formatBytes32String("liquidator"), liquidator.address);
+        await jail["file(bytes32,address)"](ethers.utils.formatBytes32String("settlement"), settlement.address);
+        await jail["file(bytes32,address)"](ethers.utils.formatBytes32String("calc"), decay.address);
         
-        await jug.rely(interaction.address);
-        await jug["file(bytes32,address)"](ethers.utils.formatBytes32String("vow"), vow.address);
-        await jug["file(bytes32,address)"](ethers.utils.formatBytes32String("licensor"), licensor.address);
-        await jug["file(bytes32,address)"](ethers.utils.formatBytes32String("davosJoin"), davosJoin.address);
+        await fee.rely(interaction.address);
+        await fee["file(bytes32,address)"](ethers.utils.formatBytes32String("settlement"), settlement.address);
+        await fee["file(bytes32,address)"](ethers.utils.formatBytes32String("licensor"), licensor.address);
+        await fee["file(bytes32,address)"](ethers.utils.formatBytes32String("stablecoinJoin"), stablecoinJoin.address);
 
-        await vow.rely(dog.address);
-        await vow["file(bytes32,address)"](ethers.utils.formatBytes32String("davos"), davos.address);
+        await settlement.rely(liquidator.address);
+        await settlement["file(bytes32,address)"](ethers.utils.formatBytes32String("stablecoin"), stablecoin.address);
         
-        await abacus.connect(deployer)["file(bytes32,uint256)"](ethers.utils.formatBytes32String("tau"), "36000"); // Price will reach 0 after this time
+        await decay.connect(deployer)["file(bytes32,uint256)"](ethers.utils.formatBytes32String("tau"), "36000"); // Price will reach 0 after this time
 
-        await interaction.setCollateralType(masterVault.address, gemJoin.address, _ilkCeMatic, clip.address, "1333333333333333333333333333");
+        await interaction.setCollateralType(masterVault.address, gemJoin.address, _ilkCeMatic, jail.address, "1333333333333333333333333333");
         await interaction.poke(masterVault.address);
         await interaction.drip(masterVault.address);
-        await interaction.setDavosProvider(masterVault.address, davosProvider.address);
+        await interaction.setProvider(masterVault.address, Provider.address);
 
-        await masterVault.changeDavosProvider(davosProvider.address);
-        await dCol.changeMinter(davosProvider.address);
+        await masterVault.changeProvider(Provider.address);
+        await dCol.changeMinter(Provider.address);
     });
 
     describe('--- Provide', function () {
         it('checks provide() functionality with ERC20', async function () {
-            await collateralToken.approve(davosProvider.address, "1" + wad);
+            await collateralToken.approve(Provider.address, "1" + wad);
             await collateralToken.mint(deployer.address, "1" + wad);
             expect(await collateralToken.balanceOf(deployer.address)).to.be.equal("1" + wad);
-            await davosProvider.provide("1" + wad);      
+            await Provider.provide("1" + wad);      
             expect(await collateralToken.balanceOf(deployer.address)).to.be.equal(0);
         });
         it('checks provide() functionality with Native', async function () {
@@ -225,51 +224,51 @@ describe('===DavosProvider===', function () {
             await dCol.deployed();
             dColImp = await upgrades.erc1967.getImplementationAddress(dCol.address);
 
-            abacus = await upgrades.deployProxy(this.Abacus, [], {initializer: "initialize"});
-            await abacus.deployed();
-            abacusImp = await upgrades.erc1967.getImplementationAddress(abacus.address);
+            decay = await upgrades.deployProxy(this.Decay, [], {initializer: "initialize"});
+            await decay.deployed();
+            decayImp = await upgrades.erc1967.getImplementationAddress(decay.address);
 
             oracle = await this.Oracle.deploy();
             await oracle.deployed();
             await oracle.setPrice("2" + wad); // 2$
 
-            vat = await upgrades.deployProxy(this.Vat, [], {initializer: "initialize"});
-            await vat.deployed();
-            vatImp = await upgrades.erc1967.getImplementationAddress(vat.address);
+            ledger = await upgrades.deployProxy(this.Ledger, [], {initializer: "initialize"});
+            await ledger.deployed();
+            ledgerImp = await upgrades.erc1967.getImplementationAddress(ledger.address);
 
-            spot = await upgrades.deployProxy(this.Spot, [vat.address], {initializer: "initialize"});
-            await spot.deployed();
-            spotImp = await upgrades.erc1967.getImplementationAddress(spot.address);
+            vision = await upgrades.deployProxy(this.Vision, [ledger.address], {initializer: "initialize"});
+            await vision.deployed();
+            visionImp = await upgrades.erc1967.getImplementationAddress(vision.address);
 
-            davos = await upgrades.deployProxy(this.Davos, ["5", "DAVOS", "5000000" + wad], {initializer: "initialize"});
-            await davos.deployed();
-            davosImp = await upgrades.erc1967.getImplementationAddress(davos.address);
+            stablecoin = await upgrades.deployProxy(this.Stablecoin, ["5", "STABLECOIN", "5000000" + wad], {initializer: "initialize"});
+            await stablecoin.deployed();
+            stablecoinImp = await upgrades.erc1967.getImplementationAddress(stablecoin.address);
 
-            davosJoin = await upgrades.deployProxy(this.DavosJoin, [vat.address, davos.address], {initializer: "initialize"});
-            await davosJoin.deployed();
-            davosJoinImp = await upgrades.erc1967.getImplementationAddress(davosJoin.address);
+            stablecoinJoin = await upgrades.deployProxy(this.StablecoinJoin, [ledger.address, stablecoin.address], {initializer: "initialize"});
+            await stablecoinJoin.deployed();
+            stablecoinJoinImp = await upgrades.erc1967.getImplementationAddress(stablecoinJoin.address);
 
-            gemJoin = await upgrades.deployProxy(this.GemJoin, [vat.address, _ilkCeMatic, masterVault.address], {initializer: "initialize"});
+            gemJoin = await upgrades.deployProxy(this.GemJoin, [ledger.address, _ilkCeMatic, masterVault.address], {initializer: "initialize"});
             await gemJoin.deployed();
             gemJoinImp = await upgrades.erc1967.getImplementationAddress(gemJoin.address);
 
-            jug = await upgrades.deployProxy(this.Jug, [vat.address], {initializer: "initialize"});
-            await jug.deployed();
-            jugImp = await upgrades.erc1967.getImplementationAddress(jug.address);
+            fee = await upgrades.deployProxy(this.Fee, [ledger.address], {initializer: "initialize"});
+            await fee.deployed();
+            feeImp = await upgrades.erc1967.getImplementationAddress(fee.address);
 
-            vow = await upgrades.deployProxy(this.Vow, [vat.address, davosJoin.address, _multisig], {initializer: "initialize"});
-            await vow.deployed();
-            vowImp = await upgrades.erc1967.getImplementationAddress(vow.address);
+            settlement = await upgrades.deployProxy(this.Settlement, [ledger.address, stablecoinJoin.address, _multisig], {initializer: "initialize"});
+            await settlement.deployed();
+            settlementImp = await upgrades.erc1967.getImplementationAddress(settlement.address);
 
-            dog = await upgrades.deployProxy(this.Dog, [vat.address], {initializer: "initialize"});
-            await dog.deployed();
-            dogImpl = await upgrades.erc1967.getImplementationAddress(dog.address);
+            liquidator = await upgrades.deployProxy(this.Liquidator, [ledger.address], {initializer: "initialize"});
+            await liquidator.deployed();
+            liquidatorImpl = await upgrades.erc1967.getImplementationAddress(liquidator.address);
 
-            clip = await upgrades.deployProxy(this.Clip, [vat.address, spot.address, dog.address, _ilkCeMatic], {initializer: "initialize"});
-            await clip.deployed();
-            clipImp = await upgrades.erc1967.getImplementationAddress(dog.address);
+            jail = await upgrades.deployProxy(this.Jail, [ledger.address, vision.address, liquidator.address, _ilkCeMatic], {initializer: "initialize"});
+            await jail.deployed();
+            jailImp = await upgrades.erc1967.getImplementationAddress(liquidator.address);
 
-            interaction = await upgrades.deployProxy(this.Interaction, [vat.address, spot.address, davos.address, davosJoin.address, jug.address, dog.address], 
+            interaction = await upgrades.deployProxy(this.Interaction, [ledger.address, vision.address, stablecoin.address, stablecoinJoin.address, fee.address, liquidator.address], 
                 {
                     initializer: "initialize",
                     unsafeAllowLinkedLibraries: true
@@ -278,164 +277,164 @@ describe('===DavosProvider===', function () {
             await interaction.deployed();
             interactionImplAddress = await upgrades.erc1967.getImplementationAddress(interaction.address);
 
-            davosProvider = await upgrades.deployProxy(this.DavosProvider, [collateralToken.address, dCol.address, masterVault.address, interaction.address, true], {initializer: "initialize"});
-            await davosProvider.deployed();
+            Provider = await upgrades.deployProxy(this.Provider, [collateralToken.address, dCol.address, masterVault.address, interaction.address, true], {initializer: "initialize"});
+            await Provider.deployed();
 
             this.PriceController = await hre.ethers.getContractFactory("PriceController");
             this.Licensor = await hre.ethers.getContractFactory("Licensor");
             licensor = await upgrades.deployProxy(this.Licensor, [deployer.address, 0, 0], {initializer: "initialize"});
 
             // initialize
-            await vat.rely(gemJoin.address);
-            await vat.rely(spot.address);
-            await vat.rely(davosJoin.address);
-            await vat.rely(jug.address);
-            await vat.rely(dog.address);
-            await vat.rely(clip.address);
-            await vat.rely(interaction.address);
-            await vat["file(bytes32,uint256)"](ethers.utils.formatBytes32String("Line"), "5000000" + rad);
-            await vat["file(bytes32,bytes32,uint256)"](_ilkCeMatic, ethers.utils.formatBytes32String("line"), "5000000" + rad);
-            await vat["file(bytes32,bytes32,uint256)"](_ilkCeMatic, ethers.utils.formatBytes32String("dust"), "100" + rad);
+            await ledger.rely(gemJoin.address);
+            await ledger.rely(vision.address);
+            await ledger.rely(stablecoinJoin.address);
+            await ledger.rely(fee.address);
+            await ledger.rely(liquidator.address);
+            await ledger.rely(jail.address);
+            await ledger.rely(interaction.address);
+            await ledger["file(bytes32,uint256)"](ethers.utils.formatBytes32String("Line"), "5000000" + rad);
+            await ledger["file(bytes32,bytes32,uint256)"](_ilkCeMatic, ethers.utils.formatBytes32String("line"), "5000000" + rad);
+            await ledger["file(bytes32,bytes32,uint256)"](_ilkCeMatic, ethers.utils.formatBytes32String("dust"), "100" + rad);
             
-            await davos.rely(davosJoin.address);
-            await davos.setSupplyCap("5000000" + wad);
+            await stablecoin.rely(stablecoinJoin.address);
+            await stablecoin.setSupplyCap("5000000" + wad);
             
-            await spot.rely(interaction.address);
-            await spot["file(bytes32,bytes32,address)"](_ilkCeMatic, ethers.utils.formatBytes32String("pip"), oracle.address);
-            await spot["file(bytes32,uint256)"](ethers.utils.formatBytes32String("par"), "1" + ray); // It means pegged to 1$
+            await vision.rely(interaction.address);
+            await vision["file(bytes32,bytes32,address)"](_ilkCeMatic, ethers.utils.formatBytes32String("pip"), oracle.address);
+            await vision["file(bytes32,uint256)"](ethers.utils.formatBytes32String("par"), "1" + ray); // It means pegged to 1$
                         
             await gemJoin.rely(interaction.address);
-            await davosJoin.rely(interaction.address);
-            await davosJoin.rely(vow.address);
+            await stablecoinJoin.rely(interaction.address);
+            await stablecoinJoin.rely(settlement.address);
             
-            await dog.rely(interaction.address);
-            await dog.rely(clip.address);
-            await dog["file(bytes32,address)"](ethers.utils.formatBytes32String("vow"), vow.address);
-            await dog["file(bytes32,uint256)"](ethers.utils.formatBytes32String("Hole"), "50000000" + rad);
-            await dog["file(bytes32,bytes32,uint256)"](_ilkCeMatic, ethers.utils.formatBytes32String("hole"), "50000000" + rad);
-            await dog["file(bytes32,bytes32,uint256)"](_ilkCeMatic, ethers.utils.formatBytes32String("chop"), "1100000000000000000");
-            await dog["file(bytes32,bytes32,address)"](_ilkCeMatic, ethers.utils.formatBytes32String("clip"), clip.address);
+            await liquidator.rely(interaction.address);
+            await liquidator.rely(jail.address);
+            await liquidator["file(bytes32,address)"](ethers.utils.formatBytes32String("settlement"), settlement.address);
+            await liquidator["file(bytes32,uint256)"](ethers.utils.formatBytes32String("Hole"), "50000000" + rad);
+            await liquidator["file(bytes32,bytes32,uint256)"](_ilkCeMatic, ethers.utils.formatBytes32String("hole"), "50000000" + rad);
+            await liquidator["file(bytes32,bytes32,uint256)"](_ilkCeMatic, ethers.utils.formatBytes32String("chop"), "1100000000000000000");
+            await liquidator["file(bytes32,bytes32,address)"](_ilkCeMatic, ethers.utils.formatBytes32String("jail"), jail.address);
             
-            await clip.rely(interaction.address);
-            await clip.rely(dog.address);
-            await clip["file(bytes32,uint256)"](ethers.utils.formatBytes32String("buf"), "1100000000000000000000000000"); // 10%
-            await clip["file(bytes32,uint256)"](ethers.utils.formatBytes32String("tail"), "10800"); // 3H reset time
-            await clip["file(bytes32,uint256)"](ethers.utils.formatBytes32String("cusp"), "600000000000000000000000000"); // 60% reset ratio
-            await clip["file(bytes32,uint256)"](ethers.utils.formatBytes32String("chip"), "100000000000000"); // 0.01% vow incentive
-            await clip["file(bytes32,uint256)"](ethers.utils.formatBytes32String("tip"), "10" + rad); // 10$ flat incentive
-            await clip["file(bytes32,uint256)"](ethers.utils.formatBytes32String("stopped"), "0");
-            await clip["file(bytes32,address)"](ethers.utils.formatBytes32String("spotter"), spot.address);
-            await clip["file(bytes32,address)"](ethers.utils.formatBytes32String("dog"), dog.address);
-            await clip["file(bytes32,address)"](ethers.utils.formatBytes32String("vow"), vow.address);
-            await clip["file(bytes32,address)"](ethers.utils.formatBytes32String("calc"), abacus.address);
+            await jail.rely(interaction.address);
+            await jail.rely(liquidator.address);
+            await jail["file(bytes32,uint256)"](ethers.utils.formatBytes32String("buf"), "1100000000000000000000000000"); // 10%
+            await jail["file(bytes32,uint256)"](ethers.utils.formatBytes32String("tail"), "10800"); // 3H reset time
+            await jail["file(bytes32,uint256)"](ethers.utils.formatBytes32String("cusp"), "600000000000000000000000000"); // 60% reset ratio
+            await jail["file(bytes32,uint256)"](ethers.utils.formatBytes32String("chip"), "100000000000000"); // 0.01% settlement incentive
+            await jail["file(bytes32,uint256)"](ethers.utils.formatBytes32String("tip"), "10" + rad); // 10$ flat incentive
+            await jail["file(bytes32,uint256)"](ethers.utils.formatBytes32String("stopped"), "0");
+            await jail["file(bytes32,address)"](ethers.utils.formatBytes32String("vision"), vision.address);
+            await jail["file(bytes32,address)"](ethers.utils.formatBytes32String("liquidator"), liquidator.address);
+            await jail["file(bytes32,address)"](ethers.utils.formatBytes32String("settlement"), settlement.address);
+            await jail["file(bytes32,address)"](ethers.utils.formatBytes32String("calc"), decay.address);
             
-            await jug.rely(interaction.address);
-            await jug["file(bytes32,address)"](ethers.utils.formatBytes32String("vow"), vow.address);
-            await jug["file(bytes32,address)"](ethers.utils.formatBytes32String("licensor"), licensor.address);
-            await jug["file(bytes32,address)"](ethers.utils.formatBytes32String("davosJoin"), davosJoin.address);
+            await fee.rely(interaction.address);
+            await fee["file(bytes32,address)"](ethers.utils.formatBytes32String("settlement"), settlement.address);
+            await fee["file(bytes32,address)"](ethers.utils.formatBytes32String("licensor"), licensor.address);
+            await fee["file(bytes32,address)"](ethers.utils.formatBytes32String("stablecoinJoin"), stablecoinJoin.address);
 
-            await vow.rely(dog.address);
-            await vow["file(bytes32,address)"](ethers.utils.formatBytes32String("davos"), davos.address);
+            await settlement.rely(liquidator.address);
+            await settlement["file(bytes32,address)"](ethers.utils.formatBytes32String("stablecoin"), stablecoin.address);
             
-            await abacus.connect(deployer)["file(bytes32,uint256)"](ethers.utils.formatBytes32String("tau"), "36000"); // Price will reach 0 after this time
+            await decay.connect(deployer)["file(bytes32,uint256)"](ethers.utils.formatBytes32String("tau"), "36000"); // Price will reach 0 after this time
 
-            await interaction.setCollateralType(masterVault.address, gemJoin.address, _ilkCeMatic, clip.address, "1333333333333333333333333333");
+            await interaction.setCollateralType(masterVault.address, gemJoin.address, _ilkCeMatic, jail.address, "1333333333333333333333333333");
             await interaction.poke(masterVault.address);
             await interaction.drip(masterVault.address);
-            await interaction.setDavosProvider(masterVault.address, davosProvider.address);
+            await interaction.setProvider(masterVault.address, Provider.address);
 
-            await masterVault.changeDavosProvider(davosProvider.address);
-            await dCol.changeMinter(davosProvider.address);
+            await masterVault.changeProvider(Provider.address);
+            await dCol.changeMinter(Provider.address);
 
-            await davosProvider.changeNativeStatus(true);
+            await Provider.changeNativeStatus(true);
 
             expect(await collateralToken.balanceOf(masterVault.address)).to.be.equal(0);
-            await expect(davosProvider.provide("2" + wad, {value: "1" + wad})).to.be.revertedWith("DavosProvider/erc20-not-accepted");      
-            await davosProvider.provide(0, {value: "1" + wad});      
+            await expect(Provider.provide("2" + wad, {value: "1" + wad})).to.be.revertedWith("Provider/erc20-not-accepted");      
+            await Provider.provide(0, {value: "1" + wad});      
             expect(await collateralToken.balanceOf(masterVault.address)).to.be.equal("1" + wad);
         });
     });
     describe('--- Release', function () {
         it('reverts: recipient is 0 address', async function () {
-            await collateralToken.approve(davosProvider.address, "1" + wad);
+            await collateralToken.approve(Provider.address, "1" + wad);
             await collateralToken.mint(deployer.address, "1" + wad);
-            await davosProvider.provide("1" + wad);      
+            await Provider.provide("1" + wad);      
 
-            await expect(davosProvider.release(NULL_ADDRESS, "1" + wad)).to.be.revertedWith("");
+            await expect(Provider.release(NULL_ADDRESS, "1" + wad)).to.be.revertedWith("");
         });
         it('checks release() functionality', async function () {
-            await collateralToken.approve(davosProvider.address, "1" + wad);
+            await collateralToken.approve(Provider.address, "1" + wad);
             await collateralToken.mint(deployer.address, "1" + wad);
-            await davosProvider.provide("1" + wad);      
+            await Provider.provide("1" + wad);      
 
-            await davosProvider.release(deployer.address, "1" + wad);
+            await Provider.release(deployer.address, "1" + wad);
         });
     });
     describe('--- Pause and Unpause', function () {
         it('pauses the contract', async function () {
-            await davosProvider.pause();      
-            expect(await davosProvider.paused()).to.be.equal(true);
+            await Provider.pause();      
+            expect(await Provider.paused()).to.be.equal(true);
         });
         it('unpauses the contract', async function () {
-            await davosProvider.pause();      
-            await davosProvider.unPause();      
-            expect(await davosProvider.paused()).to.be.equal(false);
+            await Provider.pause();      
+            await Provider.unPause();      
+            expect(await Provider.paused()).to.be.equal(false);
         });
     });
     describe('--- Setters', function () {
         it('Change underlying token', async function () {
             let newAddress = await this.Token.deploy(); 
             await newAddress.deployed();
-            await davosProvider.changeUnderlying(newAddress.address);      
-            expect(await davosProvider.underlying()).to.be.equal(newAddress.address);
+            await Provider.changeUnderlying(newAddress.address);      
+            expect(await Provider.underlying()).to.be.equal(newAddress.address);
         });
         it('Change collateral', async function () {
             let newAddress = await this.Token.deploy(); 
             await newAddress.deployed();
-            await davosProvider.changeCollateral(newAddress.address);      
-            expect(await davosProvider.collateral()).to.be.equal(newAddress.address);
+            await Provider.changeCollateral(newAddress.address);      
+            expect(await Provider.collateral()).to.be.equal(newAddress.address);
         });
         it('Change collateralDerivative', async function () {
             let newAddress = await this.Token.deploy(); 
             await newAddress.deployed();
-            await davosProvider.changeCollateralDerivative(newAddress.address);      
-            expect(await davosProvider.collateralDerivative()).to.be.equal(newAddress.address);
+            await Provider.changeCollateralDerivative(newAddress.address);      
+            expect(await Provider.collateralDerivative()).to.be.equal(newAddress.address);
         });
         it('Change masterVault', async function () {
             let newAddress = await this.Token.deploy(); 
             await newAddress.deployed();
-            await davosProvider.changeMasterVault(newAddress.address);      
-            expect(await davosProvider.masterVault()).to.be.equal(newAddress.address);
+            await Provider.changeMasterVault(newAddress.address);      
+            expect(await Provider.masterVault()).to.be.equal(newAddress.address);
         });
         it('Change interaction', async function () {
             let newAddress = await this.Token.deploy(); 
             await newAddress.deployed();
-            await davosProvider.changeInteraction(newAddress.address);      
-            expect(await davosProvider.interaction()).to.be.equal(newAddress.address);
+            await Provider.changeInteraction(newAddress.address);      
+            expect(await Provider.interaction()).to.be.equal(newAddress.address);
         });
     });
     describe('--- OnlyOwnerOrInteraction', function () {
         it('reverts: not owner or interaction', async function () {
-            await expect(davosProvider.connect(signer3).liquidation(deployer.address, "1")).to.be.revertedWith("DavosProvider/not-interaction-or-owner");
+            await expect(Provider.connect(signer3).liquidation(deployer.address, "1")).to.be.revertedWith("Provider/not-interaction-or-owner");
         });
         it('reverts: 0 address liquidation', async function () {
-            await expect(davosProvider.liquidation(NULL_ADDRESS, "1")).to.be.revertedWith("");
+            await expect(Provider.liquidation(NULL_ADDRESS, "1")).to.be.revertedWith("");
         });
         it('reverts: 0 address mint', async function () {
-            await expect(davosProvider.daoMint(NULL_ADDRESS, "1")).to.be.revertedWith("");
+            await expect(Provider.daoMint(NULL_ADDRESS, "1")).to.be.revertedWith("");
         });
         it('reverts: 0 address burn', async function () {
-            await expect(davosProvider.daoBurn(NULL_ADDRESS, "1")).to.be.revertedWith("");
+            await expect(Provider.daoBurn(NULL_ADDRESS, "1")).to.be.revertedWith("");
         });
         it('mints dCol', async function () {
-            await davosProvider.daoMint(deployer.address, "1");
+            await Provider.daoMint(deployer.address, "1");
             expect(await dCol.balanceOf(deployer.address)).to.be.equal("1");
         });
         it('burns dCol', async function () {
-            await davosProvider.daoMint(deployer.address, "1");
+            await Provider.daoMint(deployer.address, "1");
             expect(await dCol.balanceOf(deployer.address)).to.be.equal("1");
 
-            await davosProvider.daoBurn(deployer.address, "1");
+            await Provider.daoBurn(deployer.address, "1");
             expect(await dCol.balanceOf(deployer.address)).to.be.equal("0");
         });
     });

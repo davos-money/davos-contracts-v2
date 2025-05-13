@@ -11,12 +11,11 @@ const DATA = "0x02";
 describe('===Jar===', function () {
     let deployer, signer1, signer2, signer3, multisig;
 
-    let vat, 
-        spot, 
-        amaticc,
+    let ledger, 
+        vision, 
         gemJoin, 
-        jug,
-        vow,
+        fee,
+        settlement,
         jar;
 
     let oracle;
@@ -38,40 +37,40 @@ describe('===Jar===', function () {
         [deployer, signer1, signer2, signer3, multisig] = await ethers.getSigners();
 
         // Contract factory
-        this.DavosJoin = await ethers.getContractFactory("DavosJoin");
-        this.Vat = await ethers.getContractFactory("Vat");
-        this.Davos = await ethers.getContractFactory("Davos");
+        this.StablecoinJoin = await ethers.getContractFactory("StablecoinJoin");
+        this.Ledger = await ethers.getContractFactory("Ledger");
+        this.Stablecoin = await ethers.getContractFactory("Stablecoin");
         this.Jar = await ethers.getContractFactory("Jar");
 
         // Contract deployment
-        vat = await upgrades.deployProxy(this.Vat, [], {initializer: "initialize"});
-        await vat.deployed();
-        davos = await upgrades.deployProxy(this.Davos, [97, "DAVOS", "10000000" + wad], {initializer: "initialize"});
-        await davos.deployed();
-        davosjoin = await upgrades.deployProxy(this.DavosJoin, [vat.address, davos.address], {initializer: "initialize"});
-        await davosjoin.deployed();
-        jar = await await upgrades.deployProxy(this.Jar, ["StakedDavos", "sDAVOS", davos.address, 10, 0, 5], {initializer: "initialize"});
+        ledger = await upgrades.deployProxy(this.Ledger, [], {initializer: "initialize"});
+        await ledger.deployed();
+        stablecoin = await upgrades.deployProxy(this.Stablecoin, [97, "STABLECOIN", "10000000" + wad], {initializer: "initialize"});
+        await stablecoin.deployed();
+        stablecoinjoin = await upgrades.deployProxy(this.StablecoinJoin, [ledger.address, stablecoin.address], {initializer: "initialize"});
+        await stablecoinjoin.deployed();
+        jar = await await upgrades.deployProxy(this.Jar, ["StakedStablecoin", "sSTABLECOIN", stablecoin.address, 10, 0, 5], {initializer: "initialize"});
         await jar.deployed();
 
 
         // Initialize
-        await vat.init(collateral);
-        await vat.rely(davosjoin.address);
-        await davos.rely(davosjoin.address);
-        await vat.hope(davosjoin.address);
+        await ledger.init(collateral);
+        await ledger.rely(stablecoinjoin.address);
+        await stablecoin.rely(stablecoinjoin.address);
+        await ledger.hope(stablecoinjoin.address);
 
-        await vat.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "5000" + rad);
-        await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "5000" + rad);  
-        await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
-        await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("spot"), "100" + ray);
+        await ledger.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "5000" + rad);
+        await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "5000" + rad);  
+        await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
+        await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("vision"), "100" + ray);
 
-        await vat.slip(collateral, deployer.address, "100" + wad);
-        await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "100" + wad, 0);
-        await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, 0, "2500" + wad);
-        await davosjoin.exit(deployer.address,"100" + wad);
-        await davosjoin.exit(signer1.address, "400" + wad);
-        await davosjoin.exit(signer2.address, "800" + wad);
-        await davosjoin.exit(signer3.address, "1200" + wad);
+        await ledger.slip(collateral, deployer.address, "100" + wad);
+        await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "100" + wad, 0);
+        await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, 0, "2500" + wad);
+        await stablecoinjoin.exit(deployer.address,"100" + wad);
+        await stablecoinjoin.exit(signer1.address, "400" + wad);
+        await stablecoinjoin.exit(signer2.address, "800" + wad);
+        await stablecoinjoin.exit(signer3.address, "1200" + wad);
     });
 
     describe('--- Setters', function () {
@@ -93,13 +92,13 @@ describe('===Jar===', function () {
     describe('--- Extract Dust and Cage', function () {
         it('checks extracting dust', async function () {
             // Extract Dust
-            expect(await davos.balanceOf(jar.address)).to.be.equal("0");
-            await davos.transfer(jar.address, "10" + wad);
-            expect(await davos.balanceOf(jar.address)).to.be.equal("10" + wad);
+            expect(await stablecoin.balanceOf(jar.address)).to.be.equal("0");
+            await stablecoin.transfer(jar.address, "10" + wad);
+            expect(await stablecoin.balanceOf(jar.address)).to.be.equal("10" + wad);
             await jar.extractDust();
-            expect(await davos.balanceOf(jar.address)).to.be.equal("0");
+            expect(await stablecoin.balanceOf(jar.address)).to.be.equal("0");
 
-            await davos.connect(deployer).approve(jar.address, "10" + wad)
+            await stablecoin.connect(deployer).approve(jar.address, "10" + wad)
             await jar.connect(deployer).replenish("10" + wad, true);
             await expect(jar.extractDust()).to.be.revertedWith("Jar/in-distribution");
         });
@@ -162,8 +161,8 @@ describe('===Jar===', function () {
                 tau = (await ethers.provider.getBlock()).timestamp;
                 await network.provider.send("evm_setNextBlockTimestamp", [tau + 1]);
 
-                vat.connect(signer1).hope(davosjoin.address);
-                await davos.connect(signer1).approve(jar.address, "50" + wad);
+                ledger.connect(signer1).hope(stablecoinjoin.address);
+                await stablecoin.connect(signer1).approve(jar.address, "50" + wad);
                 await jar.connect(signer1).join("50" + wad); 
 
                 await network.provider.send("evm_mine"); // PreJoin
@@ -171,17 +170,17 @@ describe('===Jar===', function () {
                 tau = (await ethers.provider.getBlock()).timestamp;
                 await network.provider.send("evm_setNextBlockTimestamp", [tau + 10]);
 
-                await davos.connect(deployer).approve(jar.address, "10" + wad)
+                await stablecoin.connect(deployer).approve(jar.address, "10" + wad)
                 await jar.connect(deployer).replenish("10" + wad, true);
 
                 await network.provider.send("evm_mine"); // 0th second
 
-                expect(await davos.balanceOf(jar.address)).to.be.equal("60" + wad);
+                expect(await stablecoin.balanceOf(jar.address)).to.be.equal("60" + wad);
 
                 tau = (await ethers.provider.getBlock()).timestamp;
                 await network.provider.send("evm_setNextBlockTimestamp", [tau + 5]);
 
-                await davos.connect(signer2).approve(jar.address, "100" + wad);
+                await stablecoin.connect(signer2).approve(jar.address, "100" + wad);
                 await jar.connect(signer2).join("100" + wad);
 
                 await network.provider.send("evm_mine"); // 5th
@@ -191,7 +190,7 @@ describe('===Jar===', function () {
                 tau = (await ethers.provider.getBlock()).timestamp;
                 await network.provider.send("evm_setNextBlockTimestamp", [tau + 15]);
                                 
-                await davos.connect(deployer).approve(jar.address, "10" + wad)
+                await stablecoin.connect(deployer).approve(jar.address, "10" + wad)
                 await jar.connect(deployer).replenish("10" + wad, true);
 
                 await network.provider.send("evm_mine"); // 0th
@@ -202,7 +201,7 @@ describe('===Jar===', function () {
                 tau = (await ethers.provider.getBlock()).timestamp;
                 await network.provider.send("evm_setNextBlockTimestamp", [tau + 15]);
                                 
-                await davos.connect(deployer).approve(jar.address, "10" + wad)
+                await stablecoin.connect(deployer).approve(jar.address, "10" + wad)
                 await jar.connect(deployer).replenish("10" + wad, true);
 
                 await jar.connect(signer2).exit("50" + wad);
@@ -225,13 +224,13 @@ describe('===Jar===', function () {
                 expect(await jar.rewards(signer1.address)).to.equal("0");
                 expect(await jar.rewards(signer2.address)).to.equal("0");
 
-                expect(await davos.balanceOf(signer1.address)).to.be.equal("414999999999999999950");
-                expect(await davos.balanceOf(signer2.address)).to.be.equal("814999999999999999900");
+                expect(await stablecoin.balanceOf(signer1.address)).to.be.equal("414999999999999999950");
+                expect(await stablecoin.balanceOf(signer2.address)).to.be.equal("814999999999999999900");
 
                 tau = (await ethers.provider.getBlock()).timestamp;
                 await network.provider.send("evm_setNextBlockTimestamp", [tau + 10]);
 
-                await davos.connect(deployer).approve(jar.address, "30" + wad)
+                await stablecoin.connect(deployer).approve(jar.address, "30" + wad)
                 await jar.connect(deployer).replenish("10" + wad, true);
                 await jar.connect(deployer).replenish("10" + wad, false);
 
@@ -243,10 +242,10 @@ describe('===Jar===', function () {
                 await network.provider.send("evm_setNextBlockTimestamp", [tau + 10]);
 
                 await jar.setExitDelay("5");
-                await davos.connect(deployer).approve(jar.address, "30" + wad)
+                await stablecoin.connect(deployer).approve(jar.address, "30" + wad)
                 await jar.connect(deployer).replenish("10" + wad, true);
 
-                await davos.connect(signer1).approve(jar.address, "10" + wad);
+                await stablecoin.connect(signer1).approve(jar.address, "10" + wad);
                 await jar.connect(signer1).join("10" + wad);
 
                 await network.provider.send("evm_mine"); // 0th 

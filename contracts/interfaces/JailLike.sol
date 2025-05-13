@@ -3,14 +3,14 @@ pragma solidity ^0.8.10;
 
 struct Sale {
     uint256 pos; // Index in active array
-    uint256 tab; // Davos to raise       [rad]
+    uint256 tab; // Stablecoin to raise       [rad]
     uint256 lot; // collateral to sell [wad]
     address usr; // Liquidated CDP
     uint96 tic; // Auction start time
     uint256 top; // Starting price     [ray]
 }
 
-interface ClipperLike {
+interface JailLike {
     function ilk() external view returns (bytes32);
 
     function kick(

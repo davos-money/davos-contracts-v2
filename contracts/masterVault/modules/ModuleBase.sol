@@ -19,7 +19,7 @@ abstract contract ModuleBase is ReentrancyGuardUpgradeable, PausableUpgradeable,
 
     // --- Mods ---
     modifier onlyOwnerOrVault() {
-        require(_msgSender() == owner() || _msgSender() == masterVault, NotOwnerOrDavosProvider());
+        require(_msgSender() == owner() || _msgSender() == masterVault, NotOwnerOrProvider());
         _;
     }
 

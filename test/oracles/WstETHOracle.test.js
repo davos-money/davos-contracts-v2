@@ -64,7 +64,7 @@ describe('CollateralOracle', function () {
           const amount = ethers.utils.parseEther('1');
           await token.setRatio("1000000000000000000");
 
-          await mVault.changeDavosProvider(signer1.address);
+          await mVault.changeProvider(signer1.address);
           await token.mint(signer1.address, ethers.utils.parseEther('10'));
           await token.connect(signer1).approve(mVault.address, ethers.utils.parseEther('10'));
           await mVault.connect(signer1).deposit(amount, signer1.address);

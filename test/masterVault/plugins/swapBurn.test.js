@@ -9,8 +9,8 @@ const NULL_ADDRESS = '0x0000000000000000000000000000000000000000';
 describe('===SwapBurn===', function () {
     let deployer, susdeHolder, usdeHolder, signer1;
 
-    let davos, susde, usde,
-        mv, vow, yieldModule, licensor, priceController,
+    let stablecoin, susde, usde,
+        mv, settlement, yieldModule, licensor, priceController,
         router, permit2, priceFeed,
         swapburn;
 
@@ -60,12 +60,12 @@ describe('===SwapBurn===', function () {
         this.PriceController = await ethers.getContractFactory("PriceController");
 
         this.SwapBurn = await ethers.getContractFactory("SwapBurn");
-        this.MockVow = await ethers.getContractFactory("MockVow");
+        this.MockSettlement = await ethers.getContractFactory("MockSettlement");
 
         // Contract deployment
         susde = await ethers.getContractAt("Token", "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497");  // susde
         usde = await ethers.getContractAt("Token", "0x4c9EDD5852cd905f086C759E8383e09bff1E68B3");   // usde
-        davos = await ethers.getContractAt("Token", "0xdAC17F958D2ee523a2206206994597C13D831ec7");  // USDT
+        stablecoin = await ethers.getContractAt("Token", "0xdAC17F958D2ee523a2206206994597C13D831ec7");  // USDT
 
         mv = await upgrades.deployProxy(this.MasterVault, ["Master Vault Token", "ceMATIC", susde.address], {initializer: "initialize"});
         await mv.deployed();
@@ -79,36 +79,36 @@ describe('===SwapBurn===', function () {
         yieldModule = await upgrades.deployProxy(this.YieldModule, [mv.address, licensor.address, 1000], {initializer: "initialize"});
         await yieldModule.deployed();
 
-        vow = await this.MockVow.deploy(davos.address); 
-        await vow.deployed();
+        settlement = await this.MockSettlement.deploy(stablecoin.address); 
+        await settlement.deployed();
 
         router = "0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af";
         permit2 = "0x000000000022D473030F116dDEE9F6B43aC78BA3";
         priceFeed = "0xa569d910839Ae8865Da8F8e70FfFb0cBA869F961"; // usde/usdt
-        swapburn = await upgrades.deployProxy(this.SwapBurn, [vow.address, router, permit2, priceFeed], {initializer: "initialize"});
+        swapburn = await upgrades.deployProxy(this.SwapBurn, [settlement.address, router, permit2, priceFeed], {initializer: "initialize"});
 
         // Contract init
         await priceController.setToken(susde.address, 'convertToAssets(uint256)', 'convertToShares(uint256)', '', false);
         await yieldModule.changePriceController(priceController.address);
         await mv.addModule(yieldModule.address, "0x");
-        await mv.changeDavosProvider(signer1.address);
+        await mv.changeProvider(signer1.address);
 
         // Note: v4 Pool's Tier Fee and TickSpacing must match following, need poolId to get them
         // A quick way to fetch poolId is via browser console, graphQL response from response tab
         // Convert base64 to bytes32, to get bytes32 id, trim elements to right to get bytes25 id
         // PositionManager.poolKeys(bytes25 id)
-        await swapburn.setParams(davos.address, 200, 4, 20, 10000);  // 0.02% Fee + 1% Slippage 
+        await swapburn.setParams(stablecoin.address, 200, 4, 20, 10000);  // 0.02% Fee + 1% Slippage 
     });
 
     describe('--- initialize', function () {
 
         it('initializes', async () => {
 
-            swapburn = await upgrades.deployProxy(await ethers.getContractFactory("SwapBurn"), [vow.address, router, permit2, priceFeed], {initializer: "initialize"});
+            swapburn = await upgrades.deployProxy(await ethers.getContractFactory("SwapBurn"), [settlement.address, router, permit2, priceFeed], {initializer: "initialize"});
             expect(await swapburn.router()).to.be.eq(router);
             expect(await swapburn.permit2()).to.be.eq(permit2);
             expect(await swapburn.priceFeed()).to.be.eq(priceFeed);
-            expect(await swapburn.vow()).to.be.eq(vow.address);
+            expect(await swapburn.settlement()).to.be.eq(settlement.address);
         })
     });
 
@@ -133,8 +133,8 @@ describe('===SwapBurn===', function () {
             // Claim yield triggering plugin hooks
             await yieldModule.claimYield();
 
-            // MockVow has the amount
-            let vAmount = await davos.balanceOf(vow.address);
+            // MockSettlement has the amount
+            let vAmount = await stablecoin.balanceOf(settlement.address);
             expect(vAmount).to.be.closeTo("11600000", "100000");  // 100000 = 0.1 USDT
         })
     });

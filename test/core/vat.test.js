@@ -1,7 +1,7 @@
 const { ethers, network } = require('hardhat');
 const { expect } = require("chai");
 
-describe('===Vat===', function () {
+describe('===Ledger===', function () {
     let deployer, signer1, signer2;
 
     let wad = "000000000000000000", // 18 Decimals
@@ -15,435 +15,435 @@ describe('===Vat===', function () {
         [deployer, signer1, signer2] = await ethers.getSigners();
 
         // Contract factory
-        this.Vat = await ethers.getContractFactory("Vat");
+        this.Ledger = await ethers.getContractFactory("Ledger");
 
         // Contract deployment
-        vat = await upgrades.deployProxy(this.Vat, [], {initializer: "initialize"});
-        await vat.deployed();
+        ledger = await upgrades.deployProxy(this.Ledger, [], {initializer: "initialize"});
+        await ledger.deployed();
     });
 
     describe('--- initialize()', function () {
         it('initialize', async function () {
-            expect(await vat.live()).to.be.equal("1");
+            expect(await ledger.live()).to.be.equal("1");
         });
     });
     describe('--- rely()', function () {
-        it('reverts: Vat/not-authorized', async function () {
-            await vat.deny(deployer.address);
-            await expect(vat.rely(signer1.address)).to.be.revertedWith("Vat/not-authorized");
-            expect(await vat.wards(signer1.address)).to.be.equal("0");
+        it('reverts: Ledger/not-authorized', async function () {
+            await ledger.deny(deployer.address);
+            await expect(ledger.rely(signer1.address)).to.be.revertedWith("Ledger/not-authorized");
+            expect(await ledger.wards(signer1.address)).to.be.equal("0");
         });
-        it('reverts: Vat/not-live', async function () {
-            await vat.cage();
-            await expect(vat.rely(signer1.address)).to.be.revertedWith("Vat/not-live");
-            expect(await vat.wards(signer1.address)).to.be.equal("0");
+        it('reverts: Ledger/not-live', async function () {
+            await ledger.cage();
+            await expect(ledger.rely(signer1.address)).to.be.revertedWith("Ledger/not-live");
+            expect(await ledger.wards(signer1.address)).to.be.equal("0");
         });
         it('relies on address', async function () {
-            await vat.rely(signer1.address);
-            expect(await vat.wards(signer1.address)).to.be.equal("1");
+            await ledger.rely(signer1.address);
+            expect(await ledger.wards(signer1.address)).to.be.equal("1");
         });
     });
     describe('--- deny()', function () {
-        it('reverts: Vat/not-authorized', async function () {
-            await vat.deny(deployer.address);
-            await expect(vat.deny(signer1.address)).to.be.revertedWith("Vat/not-authorized");
+        it('reverts: Ledger/not-authorized', async function () {
+            await ledger.deny(deployer.address);
+            await expect(ledger.deny(signer1.address)).to.be.revertedWith("Ledger/not-authorized");
         });
-        it('reverts: Vat/not-live', async function () {
-            await vat.cage();
-            await expect(vat.deny(signer1.address)).to.be.revertedWith("Vat/not-live");
+        it('reverts: Ledger/not-live', async function () {
+            await ledger.cage();
+            await expect(ledger.deny(signer1.address)).to.be.revertedWith("Ledger/not-live");
         });
         it('denies an address', async function () {
-            await vat.rely(signer1.address);
-            expect(await vat.wards(signer1.address)).to.be.equal("1");
-            await vat.deny(signer1.address);
-            expect(await vat.wards(signer1.address)).to.be.equal("0");
+            await ledger.rely(signer1.address);
+            expect(await ledger.wards(signer1.address)).to.be.equal("1");
+            await ledger.deny(signer1.address);
+            expect(await ledger.wards(signer1.address)).to.be.equal("0");
         });
     });
     describe('--- behalf()', function () {
-        it('reverts: Vat/not-authorized', async function () {
-            await vat.deny(deployer.address);
-            await expect(vat.behalf(signer1.address, signer2.address)).to.be.revertedWith("Vat/not-authorized");
+        it('reverts: Ledger/not-authorized', async function () {
+            await ledger.deny(deployer.address);
+            await expect(ledger.behalf(signer1.address, signer2.address)).to.be.revertedWith("Ledger/not-authorized");
         });
         it('behalfs an address', async function () {
-            expect(await vat.can(signer1.address, signer2.address)).to.be.equal("0");
-            await vat.behalf(signer1.address, signer2.address);
-            expect(await vat.can(signer1.address, signer2.address)).to.be.equal("1");
+            expect(await ledger.can(signer1.address, signer2.address)).to.be.equal("0");
+            await ledger.behalf(signer1.address, signer2.address);
+            expect(await ledger.can(signer1.address, signer2.address)).to.be.equal("1");
         });
     });
     describe('--- regard()', function () {
-        it('reverts: Vat/not-authorized', async function () {
-            await vat.deny(deployer.address);
-            await expect(vat.behalf(signer1.address, signer2.address)).to.be.revertedWith("Vat/not-authorized");
+        it('reverts: Ledger/not-authorized', async function () {
+            await ledger.deny(deployer.address);
+            await expect(ledger.behalf(signer1.address, signer2.address)).to.be.revertedWith("Ledger/not-authorized");
         });
         it('regards an address', async function () {
-            await vat.behalf(signer1.address, signer2.address);
-            expect(await vat.can(signer1.address, signer2.address)).to.be.equal("1");
-            await vat.regard(signer1.address, signer2.address);
-            expect(await vat.can(signer1.address, signer2.address)).to.be.equal("0");
+            await ledger.behalf(signer1.address, signer2.address);
+            expect(await ledger.can(signer1.address, signer2.address)).to.be.equal("1");
+            await ledger.regard(signer1.address, signer2.address);
+            expect(await ledger.can(signer1.address, signer2.address)).to.be.equal("0");
         });
     });
     describe('--- hope()', function () {
         it('hopes on address', async function () {
-            expect(await vat.can(deployer.address, signer1.address)).to.be.equal("0");
-            await vat.hope(signer1.address);
-            expect(await vat.can(deployer.address, signer1.address)).to.be.equal("1");
+            expect(await ledger.can(deployer.address, signer1.address)).to.be.equal("0");
+            await ledger.hope(signer1.address);
+            expect(await ledger.can(deployer.address, signer1.address)).to.be.equal("1");
         });
     });
     describe('--- nope()', function () {
         it('nopes on address', async function () {
-            await vat.hope(signer1.address);
-            expect(await vat.can(deployer.address, signer1.address)).to.be.equal("1");
-            await vat.nope(signer1.address);
-            expect(await vat.can(deployer.address, signer1.address)).to.be.equal("0");
+            await ledger.hope(signer1.address);
+            expect(await ledger.can(deployer.address, signer1.address)).to.be.equal("1");
+            await ledger.nope(signer1.address);
+            expect(await ledger.can(deployer.address, signer1.address)).to.be.equal("0");
         });
     });
     describe('--- wish()', function () {
         it('bit == usr', async function () {
-            await vat.hope(signer1.address);
-            expect(await vat.can(deployer.address, signer1.address)).to.be.equal("1");
-            await vat.nope(signer1.address);
-            expect(await vat.can(deployer.address, signer1.address)).to.be.equal("0");
+            await ledger.hope(signer1.address);
+            expect(await ledger.can(deployer.address, signer1.address)).to.be.equal("1");
+            await ledger.nope(signer1.address);
+            expect(await ledger.can(deployer.address, signer1.address)).to.be.equal("0");
         });
         it('can[bit][usr] == 1', async function () {
-            await vat.hope(signer1.address);
-            expect(await vat.can(deployer.address, signer1.address)).to.be.equal("1");
-            await vat.nope(signer1.address);
-            expect(await vat.can(deployer.address, signer1.address)).to.be.equal("0");
+            await ledger.hope(signer1.address);
+            expect(await ledger.can(deployer.address, signer1.address)).to.be.equal("1");
+            await ledger.nope(signer1.address);
+            expect(await ledger.can(deployer.address, signer1.address)).to.be.equal("0");
         });
     });
     describe('--- init()', function () {
-        it('reverts: Vat/ilk-already-init', async function () {
-            await vat.init(collateral);
-            await expect(vat.init(collateral)).to.be.revertedWith("Vat/ilk-already-init");
+        it('reverts: Ledger/ilk-already-init', async function () {
+            await ledger.init(collateral);
+            await expect(ledger.init(collateral)).to.be.revertedWith("Ledger/ilk-already-init");
         });
         it('initialize a new ilk', async function () {
-            await vat.init(collateral);
-            expect(await vat.ilks(collateral)).to.not.be.equal("0");
+            await ledger.init(collateral);
+            expect(await ledger.ilks(collateral)).to.not.be.equal("0");
         });
     });
     describe('--- file(2)', function () {
-        it('reverts: Vat/not-live', async function () {
-            await vat.cage();
-            await expect(vat.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "100" + rad)).to.be.revertedWith("Vat/not-live");
+        it('reverts: Ledger/not-live', async function () {
+            await ledger.cage();
+            await expect(ledger.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "100" + rad)).to.be.revertedWith("Ledger/not-live");
         });
-        it('reverts: Vat/file-unrecognized-param', async function () {
-            await expect(vat.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Lined"), "100" + rad)).to.be.revertedWith("Vat/file-unrecognized-param");
+        it('reverts: Ledger/file-unrecognized-param', async function () {
+            await expect(ledger.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Lined"), "100" + rad)).to.be.revertedWith("Ledger/file-unrecognized-param");
         });
         it('sets Line', async function () {
-            await vat.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "100" + rad);
-            expect(await vat.Line()).to.be.equal("100" + rad);
+            await ledger.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "100" + rad);
+            expect(await ledger.Line()).to.be.equal("100" + rad);
         });
     });
     describe('--- file(3)', function () {
-        it('reverts: Vat/not-live', async function () {
-            await vat.cage();
-            await expect(vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("Line"), "100" + rad)).to.be.revertedWith("Vat/not-live");
+        it('reverts: Ledger/not-live', async function () {
+            await ledger.cage();
+            await expect(ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("Line"), "100" + rad)).to.be.revertedWith("Ledger/not-live");
         });
-        it('reverts: Vat/file-unrecognized-param', async function () {
-            await expect(vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("Lined"), "100" + rad)).to.be.revertedWith("Vat/file-unrecognized-param");
+        it('reverts: Ledger/file-unrecognized-param', async function () {
+            await expect(ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("Lined"), "100" + rad)).to.be.revertedWith("Ledger/file-unrecognized-param");
         });
-        it('sets spot', async function () {
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("spot"), "100" + ray);
-            expect(await (await vat.ilks(collateral)).spot).to.be.equal("100" + ray);
+        it('sets vision', async function () {
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("vision"), "100" + ray);
+            expect(await (await ledger.ilks(collateral)).vision).to.be.equal("100" + ray);
         });
         it('sets line', async function () {
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "100" + rad);        
-            expect(await (await vat.ilks(collateral)).line).to.be.equal("100" + rad);
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "100" + rad);        
+            expect(await (await ledger.ilks(collateral)).line).to.be.equal("100" + rad);
         });
         it('sets dust', async function () {
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "100" + rad);        
-            expect(await (await vat.ilks(collateral)).dust).to.be.equal("100" + rad);
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "100" + rad);        
+            expect(await (await ledger.ilks(collateral)).dust).to.be.equal("100" + rad);
         });
     });
     describe('--- slip()', function () {
         it('slips an amount', async function () {
-            await vat.slip(collateral, signer1.address, "10" + wad);
-            expect(await vat.gem(collateral, signer1.address)).to.be.equal("10" + wad);
+            await ledger.slip(collateral, signer1.address, "10" + wad);
+            expect(await ledger.gem(collateral, signer1.address)).to.be.equal("10" + wad);
         });
     });
     describe('--- flux()', function () {
-        it('reverts: Vat/not-allowed', async function () {
-            await vat.slip(collateral, signer1.address, "10" + wad);
-            await expect(vat.flux(collateral, signer1.address, signer2.address, "10" + wad)).to.be.revertedWith("Vat/not-allowed");
+        it('reverts: Ledger/not-allowed', async function () {
+            await ledger.slip(collateral, signer1.address, "10" + wad);
+            await expect(ledger.flux(collateral, signer1.address, signer2.address, "10" + wad)).to.be.revertedWith("Ledger/not-allowed");
         });
         it('flux an amount', async function () {
-            await vat.slip(collateral, deployer.address, "10" + wad);
-            await vat.flux(collateral, deployer.address, signer1.address, "10" + wad);
-            expect(await vat.gem(collateral, signer1.address)).to.be.equal("10" + wad);
+            await ledger.slip(collateral, deployer.address, "10" + wad);
+            await ledger.flux(collateral, deployer.address, signer1.address, "10" + wad);
+            expect(await ledger.gem(collateral, signer1.address)).to.be.equal("10" + wad);
         });
     });
     describe('--- move()', function () {
-        it('reverts: Vat/not-allowed', async function () {
-            await expect(vat.move(signer1.address, signer2.address, 0)).to.be.revertedWith("Vat/not-allowed");
+        it('reverts: Ledger/not-allowed', async function () {
+            await expect(ledger.move(signer1.address, signer2.address, 0)).to.be.revertedWith("Ledger/not-allowed");
         });
         it('flux an amount', async function () {
-            await vat.init(collateral);
+            await ledger.init(collateral);
 
-            await vat.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("spot"), "100" + ray);
+            await ledger.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("vision"), "100" + ray);
 
-            await vat.slip(collateral, deployer.address, "1" + wad);
+            await ledger.slip(collateral, deployer.address, "1" + wad);
 
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, 0, "15" + wad);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, 0, "15" + wad);
 
-            await vat.move(deployer.address, signer1.address, "1" + rad);
-            expect(await vat.davos(signer1.address)).to.be.equal("1" + rad);
+            await ledger.move(deployer.address, signer1.address, "1" + rad);
+            expect(await ledger.stablecoin(signer1.address)).to.be.equal("1" + rad);
         });
     });
     describe('--- frob()', function () {
-        it('reverts: Vat/not-allowed', async function () {
-            await vat.cage();
-            await expect(vat.frob(collateral, deployer.address, deployer.address, deployer.address, 0, 0)).to.be.revertedWith("Vat/not-live");
+        it('reverts: Ledger/not-allowed', async function () {
+            await ledger.cage();
+            await expect(ledger.frob(collateral, deployer.address, deployer.address, deployer.address, 0, 0)).to.be.revertedWith("Ledger/not-live");
         });
-        it('reverts: Vat/ilk-not-init', async function () {
-            await expect(vat.frob(collateral, deployer.address, deployer.address, deployer.address, 0, 0)).to.be.revertedWith("Vat/ilk-not-init");
+        it('reverts: Ledger/ilk-not-init', async function () {
+            await expect(ledger.frob(collateral, deployer.address, deployer.address, deployer.address, 0, 0)).to.be.revertedWith("Ledger/ilk-not-init");
         });
-        it('reverts: Vat/ceiling-exceeded', async function () {
-            await vat.init(collateral);
-            await expect(vat.frob(collateral, deployer.address, deployer.address, deployer.address, 0, 1)).to.be.revertedWith("Vat/ceiling-exceeded");
+        it('reverts: Ledger/ceiling-exceeded', async function () {
+            await ledger.init(collateral);
+            await expect(ledger.frob(collateral, deployer.address, deployer.address, deployer.address, 0, 1)).to.be.revertedWith("Ledger/ceiling-exceeded");
         });
-        it('reverts: Vat/not-safe', async function () {
-            await vat.init(collateral);
+        it('reverts: Ledger/not-safe', async function () {
+            await ledger.init(collateral);
 
-            await vat.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);        
+            await ledger.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);        
 
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("spot"), "1" + ray);
-            await vat.slip(collateral, deployer.address, "1" + wad);
-            await vat.frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
-            expect(await (await vat.urns(collateral, deployer.address)).ink).to.be.equal("1" + wad);
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("vision"), "1" + ray);
+            await ledger.slip(collateral, deployer.address, "1" + wad);
+            await ledger.frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
+            expect(await (await ledger.urns(collateral, deployer.address)).ink).to.be.equal("1" + wad);
 
-            await expect(vat.frob(collateral, deployer.address, deployer.address, deployer.address, 0, "199" + wad)).to.be.revertedWith("Vat/not-safe");
+            await expect(ledger.frob(collateral, deployer.address, deployer.address, deployer.address, 0, "199" + wad)).to.be.revertedWith("Ledger/not-safe");
         });
-        it('reverts: Vat/not-allowed-u', async function () {
-            await vat.init(collateral);
+        it('reverts: Ledger/not-allowed-u', async function () {
+            await ledger.init(collateral);
 
-            await vat.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);        
+            await ledger.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);        
 
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("spot"), "100" + ray);
-            await vat.slip(collateral, signer1.address, "1" + wad);
-            await vat.rely(signer1.address);
-            await vat.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, "1" + wad, 0);
-            await expect(vat.frob(collateral, signer1.address, signer1.address, signer1.address, -1, 0)).to.be.revertedWith("Vat/not-allowed-u");
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("vision"), "100" + ray);
+            await ledger.slip(collateral, signer1.address, "1" + wad);
+            await ledger.rely(signer1.address);
+            await ledger.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, "1" + wad, 0);
+            await expect(ledger.frob(collateral, signer1.address, signer1.address, signer1.address, -1, 0)).to.be.revertedWith("Ledger/not-allowed-u");
         });
-        it('reverts: Vat/not-allowed-v', async function () {
-            await vat.init(collateral);
+        it('reverts: Ledger/not-allowed-v', async function () {
+            await ledger.init(collateral);
 
-            await vat.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);        
+            await ledger.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);        
 
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("spot"), "100" + ray);
-            await vat.slip(collateral, signer1.address, "1" + wad);
-            await vat.rely(signer1.address);
-            await vat.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, "1" + wad, 0);
-            await expect(vat.frob(collateral, signer1.address, signer1.address, signer1.address, 10, 0)).to.be.revertedWith("Vat/not-allowed-v");
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("vision"), "100" + ray);
+            await ledger.slip(collateral, signer1.address, "1" + wad);
+            await ledger.rely(signer1.address);
+            await ledger.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, "1" + wad, 0);
+            await expect(ledger.frob(collateral, signer1.address, signer1.address, signer1.address, 10, 0)).to.be.revertedWith("Ledger/not-allowed-v");
         });
-        it('reverts: Vat/not-allowed-w', async function () {
-            await vat.init(collateral);
+        it('reverts: Ledger/not-allowed-w', async function () {
+            await ledger.init(collateral);
 
-            await vat.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);        
+            await ledger.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);        
 
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("spot"), "100" + ray);
-            await vat.slip(collateral, signer1.address, "1" + wad);
-            await vat.rely(signer1.address);
-            await vat.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, "1" + wad, 0);
-            await vat.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, 0, "10" + wad);
-            await expect(vat.frob(collateral, signer1.address, signer1.address, signer1.address, 0, "-1000000000000000000")).to.be.revertedWith("Vat/not-allowed-w");
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("vision"), "100" + ray);
+            await ledger.slip(collateral, signer1.address, "1" + wad);
+            await ledger.rely(signer1.address);
+            await ledger.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, "1" + wad, 0);
+            await ledger.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, 0, "10" + wad);
+            await expect(ledger.frob(collateral, signer1.address, signer1.address, signer1.address, 0, "-1000000000000000000")).to.be.revertedWith("Ledger/not-allowed-w");
         });
-        it('reverts: Vat/dust', async function () {
-            await vat.init(collateral);
+        it('reverts: Ledger/dust', async function () {
+            await ledger.init(collateral);
 
-            await vat.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "100" + rad);              
+            await ledger.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "100" + rad);              
 
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("spot"), "100" + ray);
-            await vat.slip(collateral, signer1.address, "1" + wad);
-            await vat.rely(signer1.address);
-            await vat.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, "1" + wad, 0);
-            await expect(vat.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, 0, "10" + wad)).to.be.revertedWith("Vat/dust");
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("vision"), "100" + ray);
+            await ledger.slip(collateral, signer1.address, "1" + wad);
+            await ledger.rely(signer1.address);
+            await ledger.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, "1" + wad, 0);
+            await expect(ledger.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, 0, "10" + wad)).to.be.revertedWith("Ledger/dust");
         });
         it('frobs collateral and frobs stablecoin', async function () {
-            await vat.init(collateral);
+            await ledger.init(collateral);
 
-            await vat.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("spot"), "100" + ray);
+            await ledger.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("vision"), "100" + ray);
 
-            await vat.slip(collateral, signer1.address, "1" + wad);
+            await ledger.slip(collateral, signer1.address, "1" + wad);
 
-            await vat.rely(signer1.address);
-            await vat.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, "1" + wad, 0);
-            await vat.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, 0, "20" + wad);
-            expect(await (await vat.urns(collateral, signer1.address)).ink).to.be.equal("1" + wad);
-            expect(await vat.davos(signer1.address)).to.be.equal("20" + rad);
+            await ledger.rely(signer1.address);
+            await ledger.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, "1" + wad, 0);
+            await ledger.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, 0, "20" + wad);
+            expect(await (await ledger.urns(collateral, signer1.address)).ink).to.be.equal("1" + wad);
+            expect(await ledger.stablecoin(signer1.address)).to.be.equal("20" + rad);
         });
     });
     describe('--- fork()', function () {
-        it('reverts: Vat/not-allowed', async function () {
-            await vat.init(collateral);
+        it('reverts: Ledger/not-allowed', async function () {
+            await ledger.init(collateral);
 
-            await vat.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("spot"), "100" + ray);
+            await ledger.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("vision"), "100" + ray);
 
-            await vat.slip(collateral, deployer.address, "1" + wad);
-            await vat.slip(collateral, signer1.address, "1" + wad);
+            await ledger.slip(collateral, deployer.address, "1" + wad);
+            await ledger.slip(collateral, signer1.address, "1" + wad);
 
-            await vat.rely(signer1.address);
+            await ledger.rely(signer1.address);
 
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, 0, "50" + wad);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, 0, "50" + wad);
 
-            await vat.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, "1" + wad, 0);
-            await vat.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, 0, "50" + wad);
+            await ledger.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, "1" + wad, 0);
+            await ledger.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, 0, "50" + wad);
 
-            await expect(vat.fork(collateral, deployer.address, signer1.address, 0, "10" + wad)).to.be.revertedWith("Vat/not-allowed");
+            await expect(ledger.fork(collateral, deployer.address, signer1.address, 0, "10" + wad)).to.be.revertedWith("Ledger/not-allowed");
 
         });
-        it('reverts: Vat/not-safe-src Vat/not-safe-dst', async function () {
-            await vat.init(collateral);
+        it('reverts: Ledger/not-safe-src Ledger/not-safe-dst', async function () {
+            await ledger.init(collateral);
 
-            await vat.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("spot"), "100" + ray);
+            await ledger.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("vision"), "100" + ray);
 
-            await vat.slip(collateral, deployer.address, "1" + wad);
-            await vat.slip(collateral, signer1.address, "1" + wad);
+            await ledger.slip(collateral, deployer.address, "1" + wad);
+            await ledger.slip(collateral, signer1.address, "1" + wad);
 
-            await vat.rely(signer1.address);
+            await ledger.rely(signer1.address);
 
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, 0, "30" + wad);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, 0, "30" + wad);
 
-            await vat.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, "1" + wad, 0);
-            await vat.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, 0, "80" + wad);
+            await ledger.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, "1" + wad, 0);
+            await ledger.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, 0, "80" + wad);
             
-            await vat.connect(deployer).hope(signer1.address);
-            await vat.connect(signer1).hope(deployer.address);
+            await ledger.connect(deployer).hope(signer1.address);
+            await ledger.connect(signer1).hope(deployer.address);
 
-            await expect(vat.fork(collateral, deployer.address, signer1.address, "1" + wad, 0)).to.be.revertedWith("Vat/not-safe-src");
-            await expect(vat.fork(collateral, deployer.address, signer1.address, 0, "30" + wad)).to.be.revertedWith("Vat/not-safe-dst");
+            await expect(ledger.fork(collateral, deployer.address, signer1.address, "1" + wad, 0)).to.be.revertedWith("Ledger/not-safe-src");
+            await expect(ledger.fork(collateral, deployer.address, signer1.address, 0, "30" + wad)).to.be.revertedWith("Ledger/not-safe-dst");
         });
-        it('reverts: Vat/dust-src Vat/dust-dst', async function () {
-            await vat.init(collateral);
+        it('reverts: Ledger/dust-src Ledger/dust-dst', async function () {
+            await ledger.init(collateral);
 
-            await vat.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("spot"), "100" + ray);
+            await ledger.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("vision"), "100" + ray);
 
-            await vat.slip(collateral, deployer.address, "1" + wad);
-            await vat.slip(collateral, signer1.address, "1" + wad);
+            await ledger.slip(collateral, deployer.address, "1" + wad);
+            await ledger.slip(collateral, signer1.address, "1" + wad);
 
-            await vat.rely(signer1.address);
+            await ledger.rely(signer1.address);
 
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, 0, "15" + wad);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, 0, "15" + wad);
 
-            await vat.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, "1" + wad, 0);
-            await vat.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, 0, "15" + wad);
+            await ledger.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, "1" + wad, 0);
+            await ledger.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, 0, "15" + wad);
             
-            await vat.connect(deployer).hope(signer1.address);
-            await vat.connect(signer1).hope(deployer.address);
+            await ledger.connect(deployer).hope(signer1.address);
+            await ledger.connect(signer1).hope(deployer.address);
 
-            await expect(vat.fork(collateral, deployer.address, signer1.address, 0, "10" + wad)).to.be.revertedWith("Vat/dust-src");
-            await expect(vat.fork(collateral, deployer.address, signer1.address, 0, "-10" + wad)).to.be.revertedWith("Vat/dust-dst");
+            await expect(ledger.fork(collateral, deployer.address, signer1.address, 0, "10" + wad)).to.be.revertedWith("Ledger/dust-src");
+            await expect(ledger.fork(collateral, deployer.address, signer1.address, 0, "-10" + wad)).to.be.revertedWith("Ledger/dust-dst");
         });
         it('forks between two addresses', async function () {
-            await vat.init(collateral);
+            await ledger.init(collateral);
 
-            await vat.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("spot"), "100" + ray);
+            await ledger.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("vision"), "100" + ray);
 
-            await vat.slip(collateral, deployer.address, "1" + wad);
-            await vat.slip(collateral, signer1.address, "1" + wad);
+            await ledger.slip(collateral, deployer.address, "1" + wad);
+            await ledger.slip(collateral, signer1.address, "1" + wad);
 
-            await vat.rely(signer1.address);
+            await ledger.rely(signer1.address);
 
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, 0, "15" + wad);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, 0, "15" + wad);
 
-            await vat.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, "1" + wad, 0);
-            await vat.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, 0, "15" + wad);
+            await ledger.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, "1" + wad, 0);
+            await ledger.connect(signer1).frob(collateral, signer1.address, signer1.address, signer1.address, 0, "15" + wad);
             
-            await vat.connect(deployer).hope(signer1.address);
-            await vat.connect(signer1).hope(deployer.address);
+            await ledger.connect(deployer).hope(signer1.address);
+            await ledger.connect(signer1).hope(deployer.address);
 
-            await vat.fork(collateral, deployer.address, signer1.address, 0, "1" + wad);
-            expect(await (await vat.urns(collateral, deployer.address)).art).to.be.equal("14" + wad);
+            await ledger.fork(collateral, deployer.address, signer1.address, 0, "1" + wad);
+            expect(await (await ledger.urns(collateral, deployer.address)).art).to.be.equal("14" + wad);
         });
     });
     describe('--- grab()', function () {
         it('grabs ink and art of an address', async function () {
-            await vat.init(collateral);
+            await ledger.init(collateral);
 
-            await vat.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("spot"), "100" + ray);
+            await ledger.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("vision"), "100" + ray);
 
-            await vat.slip(collateral, deployer.address, "1" + wad);
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, 0, "15" + wad);
+            await ledger.slip(collateral, deployer.address, "1" + wad);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, 0, "15" + wad);
 
-            await vat.rely(signer1.address);
+            await ledger.rely(signer1.address);
 
-            await vat.connect(signer1).grab(collateral, deployer.address, deployer.address, deployer.address, "-1" + wad, "-15" + wad);
-            expect(await (await vat.urns(collateral, deployer.address)).art).to.be.equal(0);
-            expect(await vat.vice()).to.be.equal("15" + rad);
+            await ledger.connect(signer1).grab(collateral, deployer.address, deployer.address, deployer.address, "-1" + wad, "-15" + wad);
+            expect(await (await ledger.urns(collateral, deployer.address)).art).to.be.equal(0);
+            expect(await ledger.vice()).to.be.equal("15" + rad);
         });
     });
     describe('--- suck()', function () {
-        it('sucks more davos for an address for sin on another', async function () {
-            await vat.init(collateral);
+        it('sucks more stablecoin for an address for sin on another', async function () {
+            await ledger.init(collateral);
 
-            await vat.suck(deployer.address, signer1.address, "10" + rad);
-            expect(await vat.davos(signer1.address)).to.be.equal("10" + rad);
-            expect(await vat.vice()).to.be.equal("10" + rad);
+            await ledger.suck(deployer.address, signer1.address, "10" + rad);
+            expect(await ledger.stablecoin(signer1.address)).to.be.equal("10" + rad);
+            expect(await ledger.vice()).to.be.equal("10" + rad);
         });
     });
     describe('--- heal()', function () {
         it('heals sin of a caller', async function () {
-            await vat.init(collateral);
+            await ledger.init(collateral);
 
-            await vat.suck(deployer.address, deployer.address, "10" + rad);
-            expect(await vat.davos(deployer.address)).to.be.equal("10" + rad);
-            expect(await vat.vice()).to.be.equal("10" + rad);
+            await ledger.suck(deployer.address, deployer.address, "10" + rad);
+            expect(await ledger.stablecoin(deployer.address)).to.be.equal("10" + rad);
+            expect(await ledger.vice()).to.be.equal("10" + rad);
 
-            await vat.heal("10" + rad);
-            expect(await vat.davos(signer1.address)).to.be.equal(0);
-            expect(await vat.vice()).to.be.equal(0);
+            await ledger.heal("10" + rad);
+            expect(await ledger.stablecoin(signer1.address)).to.be.equal(0);
+            expect(await ledger.vice()).to.be.equal(0);
         });
     });
     describe('--- fold()', function () {
-        it('reverts: Vat/not-live', async function () {
-            await vat.cage();
+        it('reverts: Ledger/not-live', async function () {
+            await ledger.cage();
 
-            await expect(vat.fold(collateral, deployer.address, "1" + ray)).to.be.revertedWith("Vat/not-live");;
+            await expect(ledger.fold(collateral, deployer.address, "1" + ray)).to.be.revertedWith("Ledger/not-live");;
         });
-        it('reverts: Vat/not-live', async function () {
-            await vat.init(collateral);
+        it('reverts: Ledger/not-live', async function () {
+            await ledger.init(collateral);
 
-            await vat.fold(collateral, deployer.address, "1" + ray);
-            expect(await (await vat.ilks(collateral)).rate).to.be.equal("2" + ray);
+            await ledger.fold(collateral, deployer.address, "1" + ray);
+            expect(await (await ledger.ilks(collateral)).rate).to.be.equal("2" + ray);
         });
     });
     describe('--- uncage()', function () {
         it('uncages previouly caged', async function () {
-            await vat.cage();
-            await vat.uncage();
-            expect(await vat.live()).to.be.equal(1);
+            await ledger.cage();
+            await ledger.uncage();
+            expect(await ledger.live()).to.be.equal(1);
         });
     });
 });

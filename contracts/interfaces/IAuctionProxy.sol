@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.10;
 
-import "./DavosJoinLike.sol";
-import "./VatLike.sol";
-import "./ClipperLike.sol";
-import "./DogLike.sol";
+import "./StablecoinJoinLike.sol";
+import "./LedgerLike.sol";
+import "./JailLike.sol";
+import "./LiquidatorLike.sol";
 import { CollateralType } from "./IInteraction.sol";
-import "../provider/interfaces/IDavosProvider.sol";
+import "../provider/interfaces/IProvider.sol";
 
 interface IAuctionProxy {
 

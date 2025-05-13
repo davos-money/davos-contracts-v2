@@ -17,7 +17,7 @@ import { IHooks                } from "@uniswap/v4-core/src/interfaces/IHooks.so
 import { Currency              } from "@uniswap/v4-core/src/types/Currency.sol";
 import { PoolKey               } from "@uniswap/v4-core/src/types/PoolKey.sol";
 
-interface IVow {
+interface ISettlement {
     function feed(uint wad) external;
 }
 interface IUniversalRouter {
@@ -37,7 +37,7 @@ contract SwapBurn is PluginBase {
     uint256 public constant MAX = 1_000_000;  // Uniswap tier BPS 
 
     // --- Data ---
-    IVow public vow;
+    ISettlement public settlement;
     IUniversalRouter public router;
     IPermit2 public permit2;
     AggregatorV3Interface public priceFeed;
@@ -56,11 +56,11 @@ contract SwapBurn is PluginBase {
     constructor() { _disableInitializers(); }
 
     // --- Init ---
-    function initialize(address _vow, address _router, address _permit2, address _priceFeed) external initializer {
+    function initialize(address _settlement, address _router, address _permit2, address _priceFeed) external initializer {
 
         __PluginBase_init();
 
-        vow = IVow(_vow);
+        settlement = ISettlement(_settlement);
         router = IUniversalRouter(_router);
         permit2 = IPermit2(_permit2);
         priceFeed = AggregatorV3Interface(_priceFeed);
@@ -81,9 +81,9 @@ contract SwapBurn is PluginBase {
     }
 
     // --- Admin ---
-    function setContracts(address _vow, address _router, address _permit2, address _priceFeed) external onlyOwner {
+    function setContracts(address _settlement, address _router, address _permit2, address _priceFeed) external onlyOwner {
         
-        vow = IVow(_vow);
+        settlement = ISettlement(_settlement);
         router = IUniversalRouter(_router);
         permit2 = IPermit2(_permit2);
         priceFeed = AggregatorV3Interface(_priceFeed);
@@ -143,8 +143,8 @@ contract SwapBurn is PluginBase {
     }
     function _feed(uint256 _wad) internal {
 
-        IERC20(tokenOut).safeIncreaseAllowance(address(vow), type(uint256).max);
-        IVow(vow).feed(_wad);
+        IERC20(tokenOut).safeIncreaseAllowance(address(settlement), type(uint256).max);
+        ISettlement(settlement).feed(_wad);
     }
 
     // --- Helper ---

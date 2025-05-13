@@ -15,23 +15,23 @@ describe('===Flash===', function () {
         [deployer, signer1, signer2] = await ethers.getSigners();
 
         // Contract factory
-        this.Vat = await ethers.getContractFactory("Vat");
-        this.Vow = await ethers.getContractFactory("Vow");
-        this.Davos = await ethers.getContractFactory("Davos");
-        this.DavosJoin = await ethers.getContractFactory("DavosJoin");
+        this.Ledger = await ethers.getContractFactory("Ledger");
+        this.Settlement = await ethers.getContractFactory("Settlement");
+        this.Stablecoin = await ethers.getContractFactory("Stablecoin");
+        this.StablecoinJoin = await ethers.getContractFactory("StablecoinJoin");
         this.Flash = await ethers.getContractFactory("Flash");
         this.BorrowingContract = await ethers.getContractFactory("FlashBorrower");
 
         // Contract deployment
-        vat = await upgrades.deployProxy(this.Vat, [], {initializer: "initialize"});
-        await vat.deployed();
-        davos = await upgrades.deployProxy(this.Davos, [97, "DUSD", "100" + wad], {initializer: "initialize"});
-        await davos.deployed();
-        davosjoin = await upgrades.deployProxy(this.DavosJoin, [vat.address, davos.address], {initializer: "initialize"});
-        await davosjoin.deployed();
-        vow = await upgrades.deployProxy(this.Vow, [vat.address, davosjoin.address, deployer.address], {initializer: "initialize"});
-        await vow.deployed();
-        flash = await upgrades.deployProxy(this.Flash, [vat.address, davos.address, davosjoin.address, vow.address], {initializer: "initialize"});
+        ledger = await upgrades.deployProxy(this.Ledger, [], {initializer: "initialize"});
+        await ledger.deployed();
+        stablecoin = await upgrades.deployProxy(this.Stablecoin, [97, "Stablecoin", "100" + wad], {initializer: "initialize"});
+        await stablecoin.deployed();
+        stablecoinjoin = await upgrades.deployProxy(this.StablecoinJoin, [ledger.address, stablecoin.address], {initializer: "initialize"});
+        await stablecoinjoin.deployed();
+        settlement = await upgrades.deployProxy(this.Settlement, [ledger.address, stablecoinjoin.address, deployer.address], {initializer: "initialize"});
+        await settlement.deployed();
+        flash = await upgrades.deployProxy(this.Flash, [ledger.address, stablecoin.address, stablecoinjoin.address, settlement.address], {initializer: "initialize"});
         await flash.deployed();
         borrowingContract = await this.BorrowingContract.connect(deployer).deploy(flash.address);
         await borrowingContract.deployed();
@@ -85,7 +85,7 @@ describe('===Flash===', function () {
         });
         it('loan token', async function () {
             await flash.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("max"), "5" + wad);
-            expect(await flash.maxFlashLoan(davos.address)).to.be.equal("5" + wad);
+            expect(await flash.maxFlashLoan(stablecoin.address)).to.be.equal("5" + wad);
         });
     });
     describe('--- flashFee()', function () {
@@ -94,52 +94,52 @@ describe('===Flash===', function () {
         });
         it('calculates flashFee', async function () {
             await flash.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("toll"), "1" + wad);
-            expect(await flash.flashFee(davos.address, "1" + wad)).to.be.equal("1" +  wad);
+            expect(await flash.flashFee(stablecoin.address, "1" + wad)).to.be.equal("1" +  wad);
         });
     });
     describe('--- flashLoan()', function () {
         it('reverts: Flash/token-unsupported', async function () {
             await flash.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("max"), "10" + wad);
             await flash.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("toll"), "10000000000000000"); // 1%
-            davos2 = await this.Davos.connect(deployer).deploy();
-            await davos2.deployed();
-            await expect(borrowingContract.flashBorrow(davos2.address, "1" + wad)).to.be.revertedWith("Flash/token-unsupported");
+            stablecoin2 = await this.Stablecoin.connect(deployer).deploy();
+            await stablecoin2.deployed();
+            await expect(borrowingContract.flashBorrow(stablecoin2.address, "1" + wad)).to.be.revertedWith("Flash/token-unsupported");
         });
         it('reverts: Flash/ceiling-exceeded', async function () {
             await flash.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("max"), "10" + wad);
             await flash.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("toll"), "10000000000000000"); // 1%
-            await expect(borrowingContract.flashBorrow(davos.address, "11" + wad)).to.be.revertedWith("Flash/ceiling-exceeded");
+            await expect(borrowingContract.flashBorrow(stablecoin.address, "11" + wad)).to.be.revertedWith("Flash/ceiling-exceeded");
         });
-        it('reverts: Flash/vat-not-live', async function () {
+        it('reverts: Flash/ledger-not-live', async function () {
             await flash.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("max"), "10" + wad);
             await flash.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("toll"), "10000000000000000"); // 1%
-            await vat.cage();
-            await expect(borrowingContract.flashBorrow(davos.address, "9" + wad)).to.be.revertedWith("Flash/vat-not-live");
+            await ledger.cage();
+            await expect(borrowingContract.flashBorrow(stablecoin.address, "9" + wad)).to.be.revertedWith("Flash/ledger-not-live");
         });
         it('flash mints, burns and accrues with fee', async function () {
-            await vat.init(collateral);
-            await vat.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("spot"), "100" + ray);
-            await vat.slip(collateral, deployer.address, "1" + wad);
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, davosjoin.address, 0, "20" + wad);
-            await vat.rely(flash.address);
-            await vat.rely(davosjoin.address);
+            await ledger.init(collateral);
+            await ledger.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("vision"), "100" + ray);
+            await ledger.slip(collateral, deployer.address, "1" + wad);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, stablecoinjoin.address, 0, "20" + wad);
+            await ledger.rely(flash.address);
+            await ledger.rely(stablecoinjoin.address);
 
-            await davos.rely(davosjoin.address);
+            await stablecoin.rely(stablecoinjoin.address);
 
-            await davosjoin.rely(flash.address);
+            await stablecoinjoin.rely(flash.address);
 
             await flash.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("max"), "10" + wad);
             await flash.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("toll"), "10000000000000000"); // 1%
-            await davos.mint(borrowingContract.address, "1000000000000000000"); // Minting 1% fee that will be returned with 1 wad next
-            await borrowingContract.flashBorrow(davos.address, "1" + wad);
+            await stablecoin.mint(borrowingContract.address, "1000000000000000000"); // Minting 1% fee that will be returned with 1 wad next
+            await borrowingContract.flashBorrow(stablecoin.address, "1" + wad);
 
-            expect(await vat.davos(vow.address)).to.be.equal("0" + rad);
+            expect(await ledger.stablecoin(settlement.address)).to.be.equal("0" + rad);
             await flash.accrue();
-            expect(await vat.davos(vow.address)).to.be.equal("10000000000000000000000000000000000000000000"); // Surplus from Flash fee
+            expect(await ledger.stablecoin(settlement.address)).to.be.equal("10000000000000000000000000000000000000000000"); // Surplus from Flash fee
         });
     });
 });

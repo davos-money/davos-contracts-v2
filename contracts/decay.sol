@@ -1,35 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-
-/// abaci.sol -- price decrease functions for auctions
-
-// Copyright (C) 2020-2022 Dai Foundation
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published
-// by the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-
+// Modified version of MakerDAO (https://github.com/makerdao/dss/blob/master/src/decay.sol)
 pragma solidity ^0.8.10;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-interface Abacus {
+interface IDecay {
     // 1st arg: initial price               [ray]
     // 2nd arg: seconds since auction start [seconds]
     // returns: current auction price       [ray]
     function price(uint256, uint256) external view returns (uint256);
 }
 
-contract LinearDecrease is Initializable, Abacus {
+// --- decay.sol --- Decay model for jail
+contract LinearDecrease is Initializable, IDecay {
 
     // --- Auth ---
     mapping (address => uint256) public wards;
@@ -101,7 +84,7 @@ contract LinearDecrease is Initializable, Abacus {
     }
 }
 
-contract StairstepExponentialDecrease is Initializable, Abacus {
+contract StairstepExponentialDecrease is Initializable, IDecay {
 
     // --- Auth ---
     mapping (address => uint256) public wards;
@@ -196,7 +179,7 @@ contract StairstepExponentialDecrease is Initializable, Abacus {
 // While an equivalent function can be obtained by setting step = 1 in StairstepExponentialDecrease,
 // this continous (i.e. per-second) exponential decrease has be implemented as it is more gas-efficient
 // than using the stairstep version with step = 1 (primarily due to 1 fewer SLOAD per price calculation).
-contract ExponentialDecrease is Initializable, Abacus {
+contract ExponentialDecrease is Initializable, IDecay {
 
     // --- Auth ---
     mapping (address => uint256) public wards;

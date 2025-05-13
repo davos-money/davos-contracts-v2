@@ -1,60 +1,43 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-
-/// clip.sol -- Davos auction module 2.0
-
-// Copyright (C) 2020-2022 Dai Foundation
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published
-// by the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-
+// Modified version of MakerDAO (https://github.com/makerdao/dss/blob/master/src/clip.sol)
 pragma solidity ^0.8.10;
 
-import "./interfaces/ClipperLike.sol";
-import "./interfaces/VatLike.sol";
+import "./interfaces/JailLike.sol";
+import "./interfaces/LedgerLike.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "./interfaces/SpotLike.sol";
-import "./interfaces/DogLike.sol";
-import { Abacus } from "./abaci.sol";
+import "./interfaces/VisionLike.sol";
+import "./interfaces/LiquidatorLike.sol";
+import { IDecay } from "./decay.sol";
 
-interface ClipperCallee {
-    function clipperCall(address, uint256, uint256, bytes calldata) external;
+interface JailCallee {
+    function jailCall(address, uint256, uint256, bytes calldata) external;
 }
 
-contract Clipper is Initializable, ClipperLike {
+// --- jail.sol --- Auction Module
+contract Jail is Initializable, JailLike {
     // --- Auth ---
     mapping (address => uint256) public wards;
     function rely(address usr) external auth { wards[usr] = 1; emit Rely(usr); }
     function deny(address usr) external auth { wards[usr] = 0; emit Deny(usr); }
     modifier auth {
-        require(wards[msg.sender] == 1, "Clipper/not-authorized");
+        require(wards[msg.sender] == 1, "Jail/not-authorized");
         _;
     }
 
     // --- Data ---
-    bytes32 public ilk;   // Collateral type of this Clipper
-    VatLike public vat;   // Core CDP Engine
+    bytes32 public ilk;        // Collateral type of this Jail
+    LedgerLike public ledger;  // Core CDP Engine
 
-    DogLike     public dog;      // Liquidation module
-    address     public vow;      // Recipient of davos raised in auctions
-    SpotLike public spotter;  // Collateral price module
-    Abacus  public calc;     // Current price calculator
+    LiquidatorLike     public liquidator;  // Liquidation module
+    address     public settlement;         // Recipient of stablecoin raised in auctions
+    VisionLike public vision;              // Collateral price module
+    IDecay  public calc;                   // Current price calculator
 
     uint256 public buf;    // Multiplicative factor to increase starting price                  [ray]
     uint256 public tail;   // Time elapsed before auction reset                                 [seconds]
     uint256 public cusp;   // Percentage drop before auction reset                              [ray]
-    uint64  public chip;   // Percentage of tab to suck from vow to incentivize keepers         [wad]
-    uint192 public tip;    // Flat fee to suck from vow to incentivize keepers                  [rad]
+    uint64  public chip;   // Percentage of tab to suck from settlement to incentivize keepers         [wad]
+    uint192 public tip;    // Flat fee to suck from settlement to incentivize keepers                  [rad]
     uint256 public chost;  // Cache the ilk dust times the ilk chop to prevent excessive SLOADs [rad]
 
     uint256   public kicks;   // Total auctions
@@ -113,10 +96,10 @@ contract Clipper is Initializable, ClipperLike {
     constructor() { _disableInitializers(); }
 
     // --- Init ---
-    function initialize(address vat_, address spotter_, address dog_, bytes32 ilk_) external initializer {
-        vat     = VatLike(vat_);
-        spotter = SpotLike(spotter_);
-        dog     = DogLike(dog_);
+    function initialize(address ledger_, address vision_, address liquidator_, bytes32 ilk_) external initializer {
+        ledger     = LedgerLike(ledger_);
+        vision = VisionLike(vision_);
+        liquidator     = LiquidatorLike(liquidator_);
         ilk     = ilk_;
         buf     = RAY;
         wards[msg.sender] = 1;
@@ -126,14 +109,14 @@ contract Clipper is Initializable, ClipperLike {
 
     // --- Synchronization ---
     modifier lock {
-        require(locked == 0, "Clipper/system-locked");
+        require(locked == 0, "Jail/system-locked");
         locked = 1;
         _;
         locked = 0;
     }
 
     modifier isStopped(uint256 level) {
-        require(stopped < level, "Clipper/stopped-incorrect");
+        require(stopped < level, "Jail/stopped-incorrect");
         _;
     }
 
@@ -149,15 +132,15 @@ contract Clipper is Initializable, ClipperLike {
         else if (what == "chip")       chip = uint64(data);   // Percentage of tab to incentivize (max: 2^64 - 1 => 18.xxx WAD = 18xx%)
         else if (what == "tip")         tip = uint192(data);  // Flat fee to incentivize keepers (max: 2^192 - 1 => 6.277T RAD)
         else if (what == "stopped") stopped = data;           // Set breaker (0, 1, 2, or 3)
-        else revert("Clipper/file-unrecognized-param");
+        else revert("Jail/file-unrecognized-param");
         emit File(what, data);
     }
     function file(bytes32 what, address data) external auth lock {
-        if (what == "spotter") spotter = SpotLike(data);
-        else if (what == "dog")    dog = DogLike(data);
-        else if (what == "vow")    vow = data;
-        else if (what == "calc")  calc = Abacus(data);
-        else revert("Clipper/file-unrecognized-param");
+        if (what == "vision") vision = VisionLike(data);
+        else if (what == "liquidator")    liquidator = LiquidatorLike(data);
+        else if (what == "settlement")    settlement = data;
+        else if (what == "calc")  calc = IDecay(data);
+        else revert("Jail/file-unrecognized-param");
         emit File(what, data);
     }
 
@@ -203,14 +186,14 @@ contract Clipper is Initializable, ClipperLike {
     // --- Auction ---
 
     // get the price directly from the OSM
-    // Could get this from rmul(Vat.ilks(ilk).spot, Spotter.mat()) instead, but
+    // Could get this from rmul(Ledger.ilks(ilk).vision, Vision.mat()) instead, but
     // if mat has changed since the last poke, the resulting value will be
     // incorrect.
     function getFeedPrice() internal returns (uint256 feedPrice) {
-        (PipLike pip, ) = spotter.ilks(ilk);
+        (PipLike pip, ) = vision.ilks(ilk);
         (bytes32 val, bool has) = pip.peek();
-        require(has, "Clipper/invalid-price");
-        feedPrice = rdiv(mul(uint256(val), BLN), spotter.par());
+        require(has, "Jail/invalid-price");
+        feedPrice = rdiv(mul(uint256(val), BLN), vision.par());
     }
 
     // start an auction
@@ -221,7 +204,7 @@ contract Clipper is Initializable, ClipperLike {
     //
     // Where `val` is the collateral's unitary value in USD, `buf` is a
     // multiplicative factor to increase the starting price, and `par` is a
-    // reference per DAVOS.
+    // reference per STABLECOIN.
     function kick(
         uint256 tab,  // Debt                   [rad]
         uint256 lot,  // Collateral             [wad]
@@ -229,11 +212,11 @@ contract Clipper is Initializable, ClipperLike {
         address kpr   // Address that will receive incentives
     ) external auth lock isStopped(1) returns (uint256 id) {
         // Input validation
-        require(tab  >          0, "Clipper/zero-tab");
-        require(lot  >          0, "Clipper/zero-lot");
-        require(usr != address(0), "Clipper/zero-usr");
+        require(tab  >          0, "Jail/zero-tab");
+        require(lot  >          0, "Jail/zero-lot");
+        require(usr != address(0), "Jail/zero-usr");
         id = ++kicks;
-        require(id   >          0, "Clipper/overflow");
+        require(id   >          0, "Jail/overflow");
 
         active.push(id);
 
@@ -246,7 +229,7 @@ contract Clipper is Initializable, ClipperLike {
 
         uint256 top;
         top = rmul(getFeedPrice(), buf);
-        require(top > 0, "Clipper/zero-top-price");
+        require(top > 0, "Jail/zero-top-price");
         _sales[id].top = top;
 
         // incentive to kick auction
@@ -255,7 +238,7 @@ contract Clipper is Initializable, ClipperLike {
         uint256 coin;
         if (_tip > 0 || _chip > 0) {
             coin = add(_tip, wmul(tab, _chip));
-            vat.suck(vow, kpr, coin);
+            ledger.suck(settlement, kpr, coin);
         }
 
         emit Kick(id, top, tab, lot, usr, kpr, coin);
@@ -272,12 +255,12 @@ contract Clipper is Initializable, ClipperLike {
         uint96  tic = _sales[id].tic;
         uint256 top = _sales[id].top;
 
-        require(usr != address(0), "Clipper/not-running-auction");
+        require(usr != address(0), "Jail/not-running-auction");
 
         // Check that auction needs reset
         // and compute current price [ray]
         (bool done,) = status(tic, top);
-        require(done, "Clipper/cannot-reset");
+        require(done, "Jail/cannot-reset");
 
         uint256 tab   = _sales[id].tab;
         uint256 lot   = _sales[id].lot;
@@ -285,7 +268,7 @@ contract Clipper is Initializable, ClipperLike {
 
         uint256 feedPrice = getFeedPrice();
         top = rmul(feedPrice, buf);
-        require(top > 0, "Clipper/zero-top-price");
+        require(top > 0, "Jail/zero-top-price");
         _sales[id].top = top;
 
         // incentive to redo auction
@@ -296,7 +279,7 @@ contract Clipper is Initializable, ClipperLike {
             uint256 _chost = chost;
             if (tab >= _chost && mul(lot, feedPrice) >= _chost) {
                 coin = add(_tip, wmul(tab, _chip));
-                vat.suck(vow, kpr, coin);
+                ledger.suck(settlement, kpr, coin);
             }
         }
 
@@ -305,15 +288,15 @@ contract Clipper is Initializable, ClipperLike {
 
     // Buy up to `amt` of collateral from the auction indexed by `id`.
     // 
-    // Auctions will not collect more DAVOS than their assigned DAVOS target,`tab`;
-    // thus, if `amt` would cost more DAVOS than `tab` at the current price, the
-    // amount of collateral purchased will instead be just enough to collect `tab` DAVOS.
+    // Auctions will not collect more STABLECOIN than their assigned STABLECOIN target,`tab`;
+    // thus, if `amt` would cost more STABLECOIN than `tab` at the current price, the
+    // amount of collateral purchased will instead be just enough to collect `tab` STABLECOIN.
     //
     // To avoid partial purchases resulting in very small leftover auctions that will
-    // never be cleared, any partial purchase must leave at least `Clipper.chost`
-    // remaining DAVOS target. `chost` is an asynchronously updated value equal to
-    // (Vat.dust * Dog.chop(ilk) / WAD) where the values are understood to be determined
-    // by whatever they were when Clipper.upchost() was last called. Purchase amounts
+    // never be cleared, any partial purchase must leave at least `Jail.chost`
+    // remaining STABLECOIN target. `chost` is an asynchronously updated value equal to
+    // (Ledger.dust * Liquidator.chop(ilk) / WAD) where the values are understood to be determined
+    // by whatever they were when Jail.upchost() was last called. Purchase amounts
     // will be minimally decreased when necessary to respect this limit; i.e., if the
     // specified `amt` would leave `tab < chost` but `tab > 0`, the amount actually
     // purchased will be such that `tab == chost`.
@@ -323,7 +306,7 @@ contract Clipper is Initializable, ClipperLike {
     function take(
         uint256 id,           // Auction id
         uint256 amt,          // Upper limit on amount of collateral to buy  [wad]
-        uint256 max,          // Maximum acceptable price (DAVOS / collateral) [ray]
+        uint256 max,          // Maximum acceptable price (STABLECOIN / collateral) [ray]
         address who,          // Receiver of collateral and external call address
         bytes calldata data   // Data to pass in external call; if length 0, no call is done
     ) external auth lock isStopped(3) {
@@ -331,7 +314,7 @@ contract Clipper is Initializable, ClipperLike {
         address usr = _sales[id].usr;
         uint96  tic = _sales[id].tic;
 
-        require(usr != address(0), "Clipper/not-running-auction");
+        require(usr != address(0), "Jail/not-running-auction");
 
         uint256 price;
         {
@@ -339,11 +322,11 @@ contract Clipper is Initializable, ClipperLike {
             (done, price) = status(tic, _sales[id].top);
 
             // Check that auction doesn't need reset
-            require(!done, "Clipper/needs-reset");
+            require(!done, "Jail/needs-reset");
         }
 
         // Ensure price is acceptable to buyer
-        require(max >= price, "Clipper/too-expensive");
+        require(max >= price, "Jail/too-expensive");
 
         uint256 lot = _sales[id].lot;
         uint256 tab = _sales[id].tab;
@@ -353,10 +336,10 @@ contract Clipper is Initializable, ClipperLike {
             // Purchase as much as possible, up to amt
             uint256 slice = min(lot, amt);  // slice <= lot
 
-            // DAVOS needed to buy a slice of this sale
+            // STABLECOIN needed to buy a slice of this sale
             owe = mul(slice, price);
 
-            // Don't collect more than tab of DAVOS
+            // Don't collect more than tab of STABLECOIN
             if (owe > tab) {
                 // Total debt will be paid
                 owe = tab;                  // owe' <= owe
@@ -367,7 +350,7 @@ contract Clipper is Initializable, ClipperLike {
                 uint256 _chost = chost;
                 if (tab - owe < _chost) {    // safe as owe < tab
                     // If tab <= chost, buyers have to take the entire lot.
-                    require(tab > _chost, "Clipper/no-partial-purchase");
+                    require(tab > _chost, "Jail/no-partial-purchase");
                     // Adjust amount to pay
                     owe = tab - _chost;      // owe' <= owe
                     // Adjust slice
@@ -381,27 +364,27 @@ contract Clipper is Initializable, ClipperLike {
             lot = lot - slice;
 
             // Send collateral to who
-            vat.flux(ilk, address(this), who, slice);
+            ledger.flux(ilk, address(this), who, slice);
 
             // Do external call (if data is defined) but to be
             // extremely careful we don't allow to do it to the two
-            // contracts which the Clipper needs to be authorized
-            DogLike dog_ = dog;
-            if (data.length > 0 && who != address(vat) && who != address(dog_)) {
-                ClipperCallee(who).clipperCall(msg.sender, owe, slice, data);
+            // contracts which the Jail needs to be authorized
+            LiquidatorLike liquidator_ = liquidator;
+            if (data.length > 0 && who != address(ledger) && who != address(liquidator_)) {
+                JailCallee(who).jailCall(msg.sender, owe, slice, data);
             }
 
-            // Get DAVOS from caller
-            vat.move(msg.sender, vow, owe);
+            // Get STABLECOIN from caller
+            ledger.move(msg.sender, settlement, owe);
 
-            // Removes DAVOS out for liquidation from accumulator
-            dog_.digs(ilk, lot == 0 ? tab + owe : owe);
+            // Removes STABLECOIN out for liquidation from accumulator
+            liquidator_.digs(ilk, lot == 0 ? tab + owe : owe);
         }
 
         if (lot == 0) {
             _remove(id);
         } else if (tab == 0) {
-            vat.flux(ilk, address(this), usr, lot);
+            ledger.flux(ilk, address(this), usr, lot);
             _remove(id);
         } else {
             _sales[id].tab = tab;
@@ -454,15 +437,15 @@ contract Clipper is Initializable, ClipperLike {
 
     // Public function to update the cached dust*chop value.
     function upchost() external {
-        (,,,, uint256 _dust) = VatLike(vat).ilks(ilk);
-        chost = wmul(_dust, dog.chop(ilk));
+        (,,,, uint256 _dust) = LedgerLike(ledger).ilks(ilk);
+        chost = wmul(_dust, liquidator.chop(ilk));
     }
 
     // Cancel an auction during ES or via governance action.
     function yank(uint256 id) external auth lock {
-        require(_sales[id].usr != address(0), "Clipper/not-running-auction");
-        dog.digs(ilk, _sales[id].tab);
-        vat.flux(ilk, address(this), msg.sender, _sales[id].lot);
+        require(_sales[id].usr != address(0), "Jail/not-running-auction");
+        liquidator.digs(ilk, _sales[id].tab);
+        ledger.flux(ilk, address(this), msg.sender, _sales[id].lot);
         _remove(id);
         emit Yank(id);
     }

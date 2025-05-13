@@ -8,16 +8,16 @@ import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/interfaces/IERC4626.sol";
 
-import "./interfaces/IDavosProvider.sol";
+import "./interfaces/IProvider.sol";
 
 import "./interfaces/ICertToken.sol";
 import "./interfaces/IWrapped.sol";
 import "../interfaces/IInteraction.sol";
 
 // --- Wrapping adaptor with instances per Underlying for MasterVault ---
-contract DavosProvider is IDavosProvider, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+contract Provider is IProvider, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
 
-    // --- Wrapper --- 'PLACEHOLDER_' slot unused
+    // --- Wrapper ---
     using SafeERC20 for IWrapped;
 
     // --- Vars ---
@@ -25,14 +25,13 @@ contract DavosProvider is IDavosProvider, OwnableUpgradeable, PausableUpgradeabl
     ICertToken public collateralDerivative;
     IERC4626 public masterVault;
     IInteraction public interaction;
-    address public aToken;
     IWrapped public underlying;              // isNative then Wrapped, else ERC20
     bool public isNative;
 
     // --- Mods ---
     modifier onlyOwnerOrInteraction() {
 
-        require(msg.sender == owner() || msg.sender == address(interaction), "DavosProvider/not-interaction-or-owner");
+        require(msg.sender == owner() || msg.sender == address(interaction), "Provider/not-interaction-or-owner");
         _;
     }
     
@@ -62,12 +61,12 @@ contract DavosProvider is IDavosProvider, OwnableUpgradeable, PausableUpgradeabl
     function provide(uint256 _amount) public payable override whenNotPaused nonReentrant returns (uint256 value) {
 
         if(isNative) {
-            require(_amount == 0, "DavosProvider/erc20-not-accepted");
+            require(_amount == 0, "Provider/erc20-not-accepted");
             uint256 native = msg.value;
             IWrapped(underlying).deposit{value: native}();
             value = masterVault.deposit(native, msg.sender);
         } else {
-            require(msg.value == 0, "DavosProvider/native-not-accepted");
+            require(msg.value == 0, "Provider/native-not-accepted");
             underlying.safeTransferFrom(msg.sender, address(this), _amount);
             value = masterVault.deposit(_amount, msg.sender);
         }
@@ -126,11 +125,6 @@ contract DavosProvider is IDavosProvider, OwnableUpgradeable, PausableUpgradeabl
     function unPause() external onlyOwner {
 
         _unpause();
-    }
-    function changeAToken(address _aToken) external onlyOwner {
-
-        aToken = _aToken;
-        emit ATokenChanged(_aToken);
     }
     function changeCollateral(address _collateral) external onlyOwner {
 

@@ -16,7 +16,7 @@ contract MasterVault is ReentrancyGuardUpgradeable, PausableUpgradeable, Ownable
 
     // --- Vars ---
     // uint256 public underlyings;   // totalAssets() + getVaultYield()
-    address public davosProvider;
+    address public Provider;
 
     IModuleBase[] public modules;
     mapping(address module => bytes data) public contexts;
@@ -24,7 +24,7 @@ contract MasterVault is ReentrancyGuardUpgradeable, PausableUpgradeable, Ownable
     // --- Mods ---
     modifier onlyOwnerOrProvider() {
 
-        require(_msgSender() == owner() || _msgSender() == davosProvider, NotOwnerOrProvider());
+        require(_msgSender() == owner() || _msgSender() == Provider, NotOwnerOrProvider());
         _;
     }
 
@@ -137,13 +137,13 @@ contract MasterVault is ReentrancyGuardUpgradeable, PausableUpgradeable, Ownable
     }
     
     // --- Admin ---
-    function changeDavosProvider(address _newProvider) external onlyOwner {
+    function changeProvider(address _newProvider) external onlyOwner {
 
         require(_newProvider != address(0), ZeroAddress());
-        address oldProvider = davosProvider;
-        davosProvider = _newProvider;
+        address oldProvider = Provider;
+        Provider = _newProvider;
 
-        emit DavosProviderChanged(oldProvider, _newProvider);
+        emit ProviderChanged(oldProvider, _newProvider);
     }
     function addModule(address _module, bytes memory _context) external onlyOwner {
 

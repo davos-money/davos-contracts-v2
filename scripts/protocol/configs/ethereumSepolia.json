@@ -3,8 +3,8 @@
     "_multisig": "",
     "_supplyCap": "",
 
-    "_vat_Line": "5000000",
-    "_spot_par": "1",
-    "_dog_Hole": "50000000",
-    "_abacus_tau": "36000"
+    "_ledger_Line": "5000000",
+    "_vision_par": "1",
+    "_liquidator_hole": "50000000",
+    "_decay_tau": "36000"
 }

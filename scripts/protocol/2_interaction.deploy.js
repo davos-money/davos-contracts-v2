@@ -15,7 +15,7 @@ async function main() {
     let _nonce = initialNonce
         
     // Addresses
-    let { _vat, _spot, _davos, _davosJoin, _dog, _jug } = require(`./addresses/${hre.network.name}_1.json`);
+    let { _ledger, _vision, _stablecoin, _stablecoinJoin, _liquidator, _fee } = require(`./addresses/${hre.network.name}_1.json`);
 
     // Fetching
     this.AuctionProxy = await hre.ethers.getContractFactory("AuctionProxy");
@@ -30,7 +30,7 @@ async function main() {
     // Deployment
     console.log("Interaction...");
 
-    let interaction = await upgrades.deployProxy(this.Interaction, [_vat, _spot, _davos, _davosJoin, _jug, _dog], {
+    let interaction = await upgrades.deployProxy(this.Interaction, [_ledger, _vision, _stablecoin, _stablecoinJoin, _fee, _liquidator], {
             initializer: "initialize",
             unsafeAllowLinkedLibraries: true,
             nonce: _nonce

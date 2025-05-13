@@ -19,85 +19,85 @@ async function main() {
     let { _chainId, _multisig, _supplyCap } = require(`./configs/${hre.network.name}.json`);
 
     // Fetching
-    this.Vat = await hre.ethers.getContractFactory("Vat");
-    this.Spot = await hre.ethers.getContractFactory("Spotter");
-    this.Davos = await hre.ethers.getContractFactory("Davos");
-    this.DavosJoin = await hre.ethers.getContractFactory("DavosJoin");
-    this.Jug = await hre.ethers.getContractFactory("Jug");
-    this.Vow = await hre.ethers.getContractFactory("Vow");
-    this.Dog = await hre.ethers.getContractFactory("Dog");
-    this.Abacus = await hre.ethers.getContractFactory("LinearDecrease");
+    this.Ledger = await hre.ethers.getContractFactory("Ledger");
+    this.Vision = await hre.ethers.getContractFactory("Vision");
+    this.Stablecoin = await hre.ethers.getContractFactory("Stablecoin");
+    this.StablecoinJoin = await hre.ethers.getContractFactory("StablecoinJoin");
+    this.Fee = await hre.ethers.getContractFactory("Fee");
+    this.Settlement = await hre.ethers.getContractFactory("Settlement");
+    this.Liquidator = await hre.ethers.getContractFactory("Liquidator");
+    this.Decay = await hre.ethers.getContractFactory("LinearDecrease");
 
     // Deployment
     console.log("Core...");
     
-    let vat = await upgrades.deployProxy(this.Vat, [], {initializer: "initialize", nonce: _nonce}); _nonce += 1;
-    await vat.deployed();
-    vatImp = await upgrades.erc1967.getImplementationAddress(vat.address);
-    console.log("Vat             :", vat.address);
-    console.log("VatImp          :", vatImp);
+    let ledger = await upgrades.deployProxy(this.Ledger, [], {initializer: "initialize", nonce: _nonce}); _nonce += 1;
+    await ledger.deployed();
+    ledgerImp = await upgrades.erc1967.getImplementationAddress(ledger.address);
+    console.log("Ledger             :", ledger.address);
+    console.log("LedgerImp          :", ledgerImp);
 
-    let spot = await upgrades.deployProxy(this.Spot, [vat.address], {initializer: "initialize", nonce: _nonce}); _nonce += 1;
-    await spot.deployed();
-    spotImp = await upgrades.erc1967.getImplementationAddress(spot.address);
-    console.log("Spot            :", spot.address);
-    console.log("SpotImp         :", spotImp)
+    let vision = await upgrades.deployProxy(this.Vision, [ledger.address], {initializer: "initialize", nonce: _nonce}); _nonce += 1;
+    await vision.deployed();
+    visionImp = await upgrades.erc1967.getImplementationAddress(vision.address);
+    console.log("Vision            :", vision.address);
+    console.log("VisionImp         :", visionImp)
 
-    let davos = await upgrades.deployProxy(this.Davos, [_chainId, "STC", _supplyCap + wad], {initializer: "initialize", nonce: _nonce}); _nonce += 1;
-    await davos.deployed();
-    davosImp = await upgrades.erc1967.getImplementationAddress(davos.address);
-    console.log("davos           :", davos.address);
-    console.log("davosImp        :", davosImp);
+    let stablecoin = await upgrades.deployProxy(this.Stablecoin, [_chainId, "STC", _supplyCap + wad], {initializer: "initialize", nonce: _nonce}); _nonce += 1;
+    await stablecoin.deployed();
+    stablecoinImp = await upgrades.erc1967.getImplementationAddress(stablecoin.address);
+    console.log("stablecoin           :", stablecoin.address);
+    console.log("stablecoinImp        :", stablecoinImp);
 
-    let davosJoin = await upgrades.deployProxy(this.DavosJoin, [vat.address, davos.address], {initializer: "initialize", nonce: _nonce}); _nonce += 1;
-    await davosJoin.deployed();
-    davosJoinImp = await upgrades.erc1967.getImplementationAddress(davosJoin.address);
-    console.log("DavosJoin       :", davosJoin.address);
-    console.log("DavosJoinImp    :", davosJoinImp)
+    let stablecoinJoin = await upgrades.deployProxy(this.StablecoinJoin, [ledger.address, stablecoin.address], {initializer: "initialize", nonce: _nonce}); _nonce += 1;
+    await stablecoinJoin.deployed();
+    stablecoinJoinImp = await upgrades.erc1967.getImplementationAddress(stablecoinJoin.address);
+    console.log("StablecoinJoin       :", stablecoinJoin.address);
+    console.log("StablecoinJoinImp    :", stablecoinJoinImp)
 
-    let vow = await upgrades.deployProxy(this.Vow, [vat.address, davosJoin.address, _multisig], {initializer: "initialize", nonce: _nonce}); _nonce += 1;
-    await vow.deployed();
-    vowImp = await upgrades.erc1967.getImplementationAddress(vow.address);
-    console.log("Vow             :", vow.address);
-    console.log("VowImp          :", vowImp);
+    let settlement = await upgrades.deployProxy(this.Settlement, [ledger.address, stablecoinJoin.address, _multisig], {initializer: "initialize", nonce: _nonce}); _nonce += 1;
+    await settlement.deployed();
+    settlementImp = await upgrades.erc1967.getImplementationAddress(settlement.address);
+    console.log("Settlement             :", settlement.address);
+    console.log("SettlementImp          :", settlementImp);
 
-    let dog = await upgrades.deployProxy(this.Dog, [vat.address], {initializer: "initialize", nonce: _nonce}); _nonce += 1;
-    await dog.deployed();
-    dogImpl = await upgrades.erc1967.getImplementationAddress(dog.address);
-    console.log("Dog             :", dog.address);
-    console.log("DogImp          :", dogImpl);
+    let liquidator = await upgrades.deployProxy(this.Liquidator, [ledger.address], {initializer: "initialize", nonce: _nonce}); _nonce += 1;
+    await liquidator.deployed();
+    liquidatorImpl = await upgrades.erc1967.getImplementationAddress(liquidator.address);
+    console.log("Liquidator             :", liquidator.address);
+    console.log("LiquidatorImp          :", liquidatorImpl);
 
-    let jug = await upgrades.deployProxy(this.Jug, [vat.address], {initializer: "initialize", nonce: _nonce}); _nonce += 1;
-    await jug.deployed();
-    jugImp = await upgrades.erc1967.getImplementationAddress(jug.address);
-    console.log("Jug             :", jug.address);
-    console.log("JugImp          :", jugImp);
+    let fee = await upgrades.deployProxy(this.Fee, [ledger.address], {initializer: "initialize", nonce: _nonce}); _nonce += 1;
+    await fee.deployed();
+    feeImp = await upgrades.erc1967.getImplementationAddress(fee.address);
+    console.log("Fee             :", fee.address);
+    console.log("FeeImp          :", feeImp);
 
-    let abacus = await upgrades.deployProxy(this.Abacus, [], {initializer: "initialize", nonce: _nonce}); _nonce += 1;
-    await abacus.deployed();
-    abacusImp = await upgrades.erc1967.getImplementationAddress(abacus.address);
-    console.log("Abacus          :", abacus.address);
-    console.log("AbacusImp       :", abacusImp);
+    let decay = await upgrades.deployProxy(this.Decay, [], {initializer: "initialize", nonce: _nonce}); _nonce += 1;
+    await decay.deployed();
+    decayImp = await upgrades.erc1967.getImplementationAddress(decay.address);
+    console.log("Decay          :", decay.address);
+    console.log("DecayImp       :", decayImp);
 
     // Store Deployed Contracts
     const addresses = {
-        _vat            : vat.address,
-        _vatImp         : vatImp,
-        _spot           : spot.address,
-        _spotImp        : spotImp,
-        _davos          : davos.address,
-        _davosImp       : davosImp,
-        _davosJoin      : davosJoin.address,
-        _davosJoinImp   : davosJoinImp,
-        _vow            : vow.address,
-        _vowImp         : vowImp,
-        _dog            : dog.address,
-        _dogImp         : dogImpl,
-        _jug            : jug.address,
-        _jugImp         : jugImp,
-        _abacus         : abacus.address,
-        _abacusImp      : abacusImp,
-        _initialNonce   : initialNonce
+        _ledger            : ledger.address,
+        _ledgerImp         : ledgerImp,
+        _vision            : vision.address,
+        _visionImp         : visionImp,
+        _stablecoin        : stablecoin.address,
+        _stablecoinImp     : stablecoinImp,
+        _stablecoinJoin    : stablecoinJoin.address,
+        _stablecoinJoinImp : stablecoinJoinImp,
+        _settlement        : settlement.address,
+        _settlementImp     : settlementImp,
+        _liquidator        : liquidator.address,
+        _liquidaImp        : liquidatorImpl,
+        _fee               : fee.address,
+        _feeImp            : feeImp,
+        _decay             : decay.address,
+        _decayImp          : decayImp,
+        _initialNonce      : initialNonce
     }
 
     const json_addresses = JSON.stringify(addresses);

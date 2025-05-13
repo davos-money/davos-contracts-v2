@@ -20,10 +20,10 @@ pragma solidity >=0.8.0;
 interface IERC1271 {
     function isValidSignature(bytes32, bytes memory) external view returns (bytes4);
 }
-interface VatLike {
+interface LedgerLike {
     function hope(address) external;
 }
-interface PotLike {
+interface SavingsLike {
     function chi() external view returns (uint256);
     function rho() external view returns (uint256);
     function dsr() external view returns (uint256);
@@ -31,17 +31,17 @@ interface PotLike {
     function join(uint256) external;
     function exit(uint256) external;
 }
-interface DUSDJoinLike {
-    function vat() external view returns (address);
-    function davos() external view returns (address);
+interface StablecoinJoinLike {
+    function ledger() external view returns (address);
+    function stablecoin() external view returns (address);
     function join(address, uint256) external;
     function exit(address, uint256) external;
 }
-interface DUSDLike {
+interface IStablecoin {
     function transferFrom(address, address, uint256) external returns (bool);
     function approve(address, uint256) external returns (bool);
 }
-interface ISDavos {
+interface ISStablecoin {
 
     // --- Events ---
     event Approval(address indexed owner, address indexed spender, uint256 value);
@@ -65,10 +65,10 @@ interface ISDavos {
     function PERMIT_TYPEHASH() external view returns (bytes32);
     function DOMAIN_SEPARATOR() external view returns (bytes32);
     function nonces(address) external view returns (uint256);
-    function vat() external view returns (VatLike);
-    function DUSDJoin() external view returns (DUSDJoinLike);
-    function DUSD() external view returns (DUSDLike);
-    function pot() external view returns (PotLike);
+    function ledger() external view returns (LedgerLike);
+    function stablecoinJoin() external view returns (StablecoinJoinLike);
+    function stablecoin() external view returns (IStablecoin);
+    function savings() external view returns (SavingsLike);
     function increaseAllowance(address, uint256) external returns (bool);
     function decreaseAllowance(address, uint256) external returns (bool);
     function asset() external view returns (address);

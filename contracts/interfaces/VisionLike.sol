@@ -3,7 +3,7 @@ pragma solidity ^0.8.10;
 
 import "./PipLike.sol";
 
-interface SpotLike {
+interface VisionLike {
     function ilks(bytes32) external view returns (PipLike, uint256);
 
     function poke(bytes32) external;

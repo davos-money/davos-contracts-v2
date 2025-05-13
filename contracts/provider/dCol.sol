@@ -31,7 +31,7 @@ contract dCol is OwnableUpgradeable, NonTransferableERC20 {
 
     function initialize() external initializer {
         __Ownable_init(_msgSender());
-        __ERC20_init_unchained("Davos Collateral", "dCOL");
+        __ERC20_init_unchained("Stablecoin Collateral", "dCOL");
     }
 
     function burn(address account, uint256 amount) external onlyMinter {

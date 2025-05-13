@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// Modified version of MakerDAO (https://github.com/makerdao/sdai/blob/master/src/SavingsDai.sol)
 pragma solidity ^0.8.10;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "./interfaces/ISDavos.sol";
+import "./interfaces/ISStablecoin.sol";
 
-/// A tokenized representation DUSD in the DSR (pot)
-contract sDusd is ISDavos, Initializable {
+// --- sStablecoin --- A tokenized representation stablecoin in the DSR (savings)
+contract sStablecoin is ISStablecoin, Initializable {
 
     // --- Data ---
-    string  public constant name     = "Staked Davos.xyz Stablecoin";
+    string  public constant name     = "Staked Stablecoin";
     string  public constant symbol   = "sSTC";
     string  public constant version  = "1";
     uint8   public constant decimals = 18;
@@ -18,10 +19,10 @@ contract sDusd is ISDavos, Initializable {
     mapping (address => mapping (address => uint256)) public allowance;
     mapping (address => uint256)                      public nonces;
 
-    VatLike      public vat;
-    DUSDJoinLike public DUSDJoin;
-    DUSDLike     public DUSD;
-    PotLike      public pot;
+    LedgerLike         public ledger;
+    StablecoinJoinLike public stablecoinJoin;
+    IStablecoin        public stablecoin;
+    SavingsLike        public savings;
 
     // --- EIP712 niceties ---
     uint256 public deploymentChainId;
@@ -35,19 +36,19 @@ contract sDusd is ISDavos, Initializable {
     constructor() { _disableInitializers(); }
 
     // --- Init ---
-    function initialize(address _dUSDJoin, address _pot) external initializer {
-        DUSDJoin = DUSDJoinLike(_dUSDJoin);
-        vat = VatLike(DUSDJoin.vat());
-        DUSD = DUSDLike(DUSDJoin.davos());
-        pot = PotLike(_pot);
+    function initialize(address _stablecoinJoin, address _savings) external initializer {
+        stablecoinJoin = StablecoinJoinLike(_stablecoinJoin);
+        ledger = LedgerLike(stablecoinJoin.ledger());
+        stablecoin = IStablecoin(stablecoinJoin.stablecoin());
+        savings = SavingsLike(_savings);
 
         deploymentChainId = block.chainid;
         _DOMAIN_SEPARATOR = _calculateDomainSeparator(block.chainid);
 
-        vat.hope(address(DUSDJoin));
-        vat.hope(address(pot));
+        ledger.hope(address(stablecoinJoin));
+        ledger.hope(address(savings));
 
-        DUSD.approve(address(DUSDJoin), type(uint256).max);
+        stablecoin.approve(address(stablecoinJoin), type(uint256).max);
     }
     function _calculateDomainSeparator(uint256 chainId) private view returns (bytes32) {
         return keccak256(
@@ -94,9 +95,9 @@ contract sDusd is ISDavos, Initializable {
 
     // --- ERC20 Mutations ---
     function transfer(address to, uint256 value) external returns (bool) {
-        require(to != address(0) && to != address(this), "SavingsDUSD/invalid-address");
+        require(to != address(0) && to != address(this), "SavingsStablecoin/invalid-address");
         uint256 balance = balanceOf[msg.sender];
-        require(balance >= value, "SavingsDUSD/insufficient-balance");
+        require(balance >= value, "SavingsStablecoin/insufficient-balance");
 
         unchecked {
             balanceOf[msg.sender] = balance - value;
@@ -108,14 +109,14 @@ contract sDusd is ISDavos, Initializable {
         return true;
     }
     function transferFrom(address from, address to, uint256 value) external returns (bool) {
-        require(to != address(0) && to != address(this), "SavingsDUSD/invalid-address");
+        require(to != address(0) && to != address(this), "SavingsStablecoin/invalid-address");
         uint256 balance = balanceOf[from];
-        require(balance >= value, "SavingsDUSD/insufficient-balance");
+        require(balance >= value, "SavingsStablecoin/insufficient-balance");
 
         if (from != msg.sender) {
             uint256 allowed = allowance[from][msg.sender];
             if (allowed != type(uint256).max) {
-                require(allowed >= value, "SavingsDUSD/insufficient-allowance");
+                require(allowed >= value, "SavingsStablecoin/insufficient-allowance");
 
                 unchecked {
                     allowance[from][msg.sender] = allowed - value;
@@ -149,7 +150,7 @@ contract sDusd is ISDavos, Initializable {
     }
     function decreaseAllowance(address spender, uint256 subtractedValue) external returns (bool) {
         uint256 allowed = allowance[msg.sender][spender];
-        require(allowed >= subtractedValue, "SavingsDUSD/insufficient-allowance");
+        require(allowed >= subtractedValue, "SavingsStablecoin/insufficient-allowance");
         unchecked{
             allowed = allowed - subtractedValue;
         }
@@ -162,13 +163,13 @@ contract sDusd is ISDavos, Initializable {
 
     // --- Mint/Burn Internal ---
     function _mint(uint256 assets, uint256 shares, address receiver) internal {
-        require(receiver != address(0) && receiver != address(this), "SavingsDUSD/invalid-address");
+        require(receiver != address(0) && receiver != address(this), "SavingsStablecoin/invalid-address");
 
-        DUSD.transferFrom(msg.sender, address(this), assets);
-        DUSDJoin.join(address(this), assets);
-        pot.join(shares);
+        stablecoin.transferFrom(msg.sender, address(this), assets);
+        stablecoinJoin.join(address(this), assets);
+        savings.join(shares);
 
-        // note: we don't need an overflow check here b/c shares totalSupply will always be <= DUSD totalSupply
+        // note: we don't need an overflow check here b/c shares totalSupply will always be <= stablecoin totalSupply
         unchecked {
             balanceOf[receiver] = balanceOf[receiver] + shares;
             totalSupply = totalSupply + shares;
@@ -179,12 +180,12 @@ contract sDusd is ISDavos, Initializable {
     }
     function _burn(uint256 assets, uint256 shares, address receiver, address owner) internal {
         uint256 balance = balanceOf[owner];
-        require(balance >= shares, "SavingsDUSD/insufficient-balance");
+        require(balance >= shares, "SavingsStablecoin/insufficient-balance");
 
         if (owner != msg.sender) {
             uint256 allowed = allowance[owner][msg.sender];
             if (allowed != type(uint256).max) {
-                require(allowed >= shares, "SavingsDUSD/insufficient-allowance");
+                require(allowed >= shares, "SavingsStablecoin/insufficient-allowance");
 
                 unchecked {
                     allowance[owner][msg.sender] = allowed - shares;
@@ -197,8 +198,8 @@ contract sDusd is ISDavos, Initializable {
             totalSupply      = totalSupply - shares;
         }
 
-        pot.exit(shares);
-        DUSDJoin.exit(receiver, assets);
+        savings.exit(shares);
+        stablecoinJoin.exit(receiver, assets);
 
         emit Transfer(owner, address(0), shares);
         emit Withdraw(msg.sender, receiver, owner, assets, shares);
@@ -206,19 +207,19 @@ contract sDusd is ISDavos, Initializable {
 
     // --- ERC-4626 ---
     function asset() external view returns (address) {
-        return address(DUSD);
+        return address(stablecoin);
     }
     function totalAssets() external view returns (uint256) {
         return convertToAssets(totalSupply);
     }
     function convertToShares(uint256 assets) public view returns (uint256) {
-        uint256 rho = pot.rho();
-        uint256 chi = (block.timestamp > rho) ? _rpow(pot.dsr(), block.timestamp - rho) * pot.chi() / RAY : pot.chi();
+        uint256 rho = savings.rho();
+        uint256 chi = (block.timestamp > rho) ? _rpow(savings.dsr(), block.timestamp - rho) * savings.chi() / RAY : savings.chi();
         return assets * RAY / chi;
     }
     function convertToAssets(uint256 shares) public view returns (uint256) {
-        uint256 rho = pot.rho();
-        uint256 chi = (block.timestamp > rho) ? _rpow(pot.dsr(), block.timestamp - rho) * pot.chi() / RAY : pot.chi();
+        uint256 rho = savings.rho();
+        uint256 chi = (block.timestamp > rho) ? _rpow(savings.dsr(), block.timestamp - rho) * savings.chi() / RAY : savings.chi();
         return shares * chi / RAY;
     }
     function maxDeposit(address) external pure returns (uint256) {
@@ -228,7 +229,7 @@ contract sDusd is ISDavos, Initializable {
         return convertToShares(assets);
     }
     function deposit(uint256 assets, address receiver) public returns (uint256 shares) {
-        uint256 chi = (block.timestamp > pot.rho()) ? pot.drip() : pot.chi();
+        uint256 chi = (block.timestamp > savings.rho()) ? savings.drip() : savings.chi();
         shares = assets * RAY / chi;
         _mint(assets, shares, receiver);
     }
@@ -240,12 +241,12 @@ contract sDusd is ISDavos, Initializable {
         return type(uint256).max;
     }
     function previewMint(uint256 shares) external view returns (uint256) {
-        uint256 rho = pot.rho();
-        uint256 chi = (block.timestamp > rho) ? _rpow(pot.dsr(), block.timestamp - rho) * pot.chi() / RAY : pot.chi();
+        uint256 rho = savings.rho();
+        uint256 chi = (block.timestamp > rho) ? _rpow(savings.dsr(), block.timestamp - rho) * savings.chi() / RAY : savings.chi();
         return _divup(shares * chi, RAY);
     }
     function mint(uint256 shares, address receiver) public returns (uint256 assets) {
-        uint256 chi = (block.timestamp > pot.rho()) ? pot.drip() : pot.chi();
+        uint256 chi = (block.timestamp > savings.rho()) ? savings.drip() : savings.chi();
         assets = _divup(shares * chi, RAY);
         _mint(assets, shares, receiver);
     }
@@ -257,12 +258,12 @@ contract sDusd is ISDavos, Initializable {
         return convertToAssets(balanceOf[owner]);
     }
     function previewWithdraw(uint256 assets) external view returns (uint256) {
-        uint256 rho = pot.rho();
-        uint256 chi = (block.timestamp > rho) ? _rpow(pot.dsr(), block.timestamp - rho) * pot.chi() / RAY : pot.chi();
+        uint256 rho = savings.rho();
+        uint256 chi = (block.timestamp > rho) ? _rpow(savings.dsr(), block.timestamp - rho) * savings.chi() / RAY : savings.chi();
         return _divup(assets * RAY, chi);
     }
     function withdraw(uint256 assets, address receiver, address owner) external returns (uint256 shares) {
-        uint256 chi = (block.timestamp > pot.rho()) ? pot.drip() : pot.chi();
+        uint256 chi = (block.timestamp > savings.rho()) ? savings.drip() : savings.chi();
         shares = _divup(assets * RAY, chi);
         _burn(assets, shares, receiver, owner);
     }
@@ -273,7 +274,7 @@ contract sDusd is ISDavos, Initializable {
         return convertToAssets(shares);
     }
     function redeem(uint256 shares, address receiver, address owner) external returns (uint256 assets) {
-        uint256 chi = (block.timestamp > pot.rho()) ? pot.drip() : pot.chi();
+        uint256 chi = (block.timestamp > savings.rho()) ? savings.drip() : savings.chi();
         assets = shares * chi / RAY;
         _burn(assets, shares, receiver, owner);
     }
@@ -302,8 +303,8 @@ contract sDusd is ISDavos, Initializable {
             abi.decode(result, (bytes4)) == IERC1271.isValidSignature.selector);
     }
     function permit(address owner, address spender, uint256 value, uint256 deadline, bytes memory signature) public {
-        require(block.timestamp <= deadline, "SavingsDUSD/permit-expired");
-        require(owner != address(0), "SavingsDUSD/invalid-owner");
+        require(block.timestamp <= deadline, "SavingsStablecoin/permit-expired");
+        require(owner != address(0), "SavingsStablecoin/invalid-owner");
 
         uint256 nonce;
         unchecked { nonce = nonces[owner]++; }
@@ -322,7 +323,7 @@ contract sDusd is ISDavos, Initializable {
                 ))
             ));
 
-        require(_isValidSignature(owner, digest, signature), "SavingsDUSD/invalid-permit");
+        require(_isValidSignature(owner, digest, signature), "SavingsStablecoin/invalid-permit");
 
         allowance[owner][spender] = value;
         emit Approval(owner, spender, value);

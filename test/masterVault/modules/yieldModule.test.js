@@ -43,7 +43,7 @@ describe('===YieldModule===', function () {
 
         // Contract init
         await mv.addModule(yieldModule.address, "0x");
-        await mv.changeDavosProvider(signer1.address);
+        await mv.changeProvider(signer1.address);
     });
 
     describe('--- initialize', function () {

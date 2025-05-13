@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.8.0;
 
-interface IDavosProvider {
+interface IProvider {
 
     // --- Events ---
     event Deposit(address indexed _account, uint256 _amount);
@@ -10,7 +10,7 @@ interface IDavosProvider {
     event CollateralDerivativeChanged(address _collateralDerivative);
     event MasterVaultChanged(address _masterVault);
     event InteractionChanged(address _interaction);
-    event UnderlyingChanged(address _matic);
+    event UnderlyingChanged(address _underlying);
     event NativeStatusChanged(bool _isNative);
     event ATokenChanged(address _wAToken);
     event Referral(bytes32 indexed _code);

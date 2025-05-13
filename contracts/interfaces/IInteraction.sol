@@ -7,7 +7,7 @@ struct CollateralType {
     GemJoinLike gem;
     bytes32 ilk;
     uint32 live; //0 - inactive, 1 - started, 2 - stopped
-    address clip;
+    address jail;
 }
 
 interface IInteraction {
@@ -25,7 +25,7 @@ interface IInteraction {
     event AddedToWhitelist(address indexed user);
     event RemovedFromWhitelist(address indexed user);
     event ChangeRewards(address rewards);
-    event ChangeDavosProvider(address davosProvider);
+    event ChangeProvider(address Provider);
 
       function deposit(
         address participant,
@@ -40,5 +40,5 @@ interface IInteraction {
     ) external returns (uint256);
 
     function buyFromAuction(address token, uint256 auctionId, uint256 collateralAmount, uint256 maxPrice, address receiverAddress) external;
-    function collaterals(address) external view returns(GemJoinLike gem, bytes32 ilk, uint32 live, address clip);
+    function collaterals(address) external view returns(GemJoinLike gem, bytes32 ilk, uint32 live, address jail);
 }

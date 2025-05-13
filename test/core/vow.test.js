@@ -1,7 +1,7 @@
 const { ethers, network } = require('hardhat');
 const { expect } = require("chai");
 
-describe('===Vow===', function () {
+describe('===Settlement===', function () {
     let deployer, signer1, signer2;
 
     let wad = "000000000000000000", // 18 Decimals
@@ -17,203 +17,203 @@ describe('===Vow===', function () {
         [deployer, signer1, signer2] = await ethers.getSigners();
 
         // Contract factory
-        this.Vow = await ethers.getContractFactory("Vow");
-        this.Vat = await ethers.getContractFactory("Vat");
-        this.DavosJoin = await ethers.getContractFactory("DavosJoin");
-        this.Davos = await ethers.getContractFactory("Davos");
+        this.Settlement = await ethers.getContractFactory("Settlement");
+        this.Ledger = await ethers.getContractFactory("Ledger");
+        this.StablecoinJoin = await ethers.getContractFactory("StablecoinJoin");
+        this.Stablecoin = await ethers.getContractFactory("Stablecoin");
 
         // Contract deployment
-        vat = await upgrades.deployProxy(this.Vat, [], {initializer: "initialize"});
-        await vat.deployed();
-        davos = await upgrades.deployProxy(this.Davos, ["97", "DAVOS", "100" + wad], {initializer: "initialize"});
-        await davos.deployed();
-        davosJoin = await upgrades.deployProxy(this.DavosJoin, [vat.address, davos.address], {initializer: "initialize"});
-        await davosJoin.deployed();
-        vow = await upgrades.deployProxy(this.Vow, [vat.address, davosJoin.address, deployer.address], {initializer: "initialize"});
-        await vow.deployed();
+        ledger = await upgrades.deployProxy(this.Ledger, [], {initializer: "initialize"});
+        await ledger.deployed();
+        stablecoin = await upgrades.deployProxy(this.Stablecoin, ["97", "STABLECOIN", "100" + wad], {initializer: "initialize"});
+        await stablecoin.deployed();
+        stablecoinJoin = await upgrades.deployProxy(this.StablecoinJoin, [ledger.address, stablecoin.address], {initializer: "initialize"});
+        await stablecoinJoin.deployed();
+        settlement = await upgrades.deployProxy(this.Settlement, [ledger.address, stablecoinJoin.address, deployer.address], {initializer: "initialize"});
+        await settlement.deployed();
     });
 
     describe('--- initialize()', function () {
         it('initialize', async function () {
-            expect(await vow.live()).to.be.equal("1");
+            expect(await settlement.live()).to.be.equal("1");
         });
     });
     describe('--- rely()', function () {
-        it('reverts: Vow/not-authorized', async function () {
-            await vow.deny(deployer.address);
-            await expect(vow.rely(signer1.address)).to.be.revertedWith("Vow/not-authorized");
-            expect(await vow.wards(signer1.address)).to.be.equal("0");
+        it('reverts: Settlement/not-authorized', async function () {
+            await settlement.deny(deployer.address);
+            await expect(settlement.rely(signer1.address)).to.be.revertedWith("Settlement/not-authorized");
+            expect(await settlement.wards(signer1.address)).to.be.equal("0");
         });
-        it('reverts: Vow/not-live', async function () {
-            await vow.cage();
-            await expect(vow.rely(signer1.address)).to.be.revertedWith("Vow/not-live");
-            expect(await vow.wards(signer1.address)).to.be.equal("0");
+        it('reverts: Settlement/not-live', async function () {
+            await settlement.cage();
+            await expect(settlement.rely(signer1.address)).to.be.revertedWith("Settlement/not-live");
+            expect(await settlement.wards(signer1.address)).to.be.equal("0");
         });
         it('relies on address', async function () {
-            await vow.rely(signer1.address);
-            expect(await vow.wards(signer1.address)).to.be.equal("1");
+            await settlement.rely(signer1.address);
+            expect(await settlement.wards(signer1.address)).to.be.equal("1");
         });
     });
     describe('--- deny()', function () {
-        it('reverts: Vow/not-authorized', async function () {
-            await vow.deny(deployer.address);
-            await expect(vow.deny(signer1.address)).to.be.revertedWith("Vow/not-authorized");
+        it('reverts: Settlement/not-authorized', async function () {
+            await settlement.deny(deployer.address);
+            await expect(settlement.deny(signer1.address)).to.be.revertedWith("Settlement/not-authorized");
         });
         it('denies an address', async function () {
-            await vow.rely(signer1.address);
-            expect(await vow.wards(signer1.address)).to.be.equal("1");
-            await vow.deny(signer1.address);
-            expect(await vow.wards(signer1.address)).to.be.equal("0");
+            await settlement.rely(signer1.address);
+            expect(await settlement.wards(signer1.address)).to.be.equal("1");
+            await settlement.deny(signer1.address);
+            expect(await settlement.wards(signer1.address)).to.be.equal("0");
         });
     });
     describe('--- file(2a)', function () {
-        it('reverts: Vow/not-authorized', async function () {
-            await vow.deny(deployer.address);
-            await expect(vow.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("humpy"), "100" + rad)).to.be.revertedWith("Vow/not-authorized");
+        it('reverts: Settlement/not-authorized', async function () {
+            await settlement.deny(deployer.address);
+            await expect(settlement.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("humpy"), "100" + rad)).to.be.revertedWith("Settlement/not-authorized");
         });
-        it('reverts: Vow/file-unrecognized-param', async function () {
-            await expect(vow.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("humpy"), "100" + rad)).to.be.revertedWith("Vow/file-unrecognized-param");
+        it('reverts: Settlement/file-unrecognized-param', async function () {
+            await expect(settlement.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("humpy"), "100" + rad)).to.be.revertedWith("Settlement/file-unrecognized-param");
         });
         it('sets hump', async function () {
-            await vow.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("hump"), "100" + rad);
-            expect(await vow.hump()).to.be.equal("100" + rad);
+            await settlement.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("hump"), "100" + rad);
+            expect(await settlement.hump()).to.be.equal("100" + rad);
         });
     });
     describe('--- file(2b)', function () {
-        it('reverts: Vow/not-authorized', async function () {
-            await vow.deny(deployer.address);
-            await expect(vow.connect(deployer)["file(bytes32,address)"](await ethers.utils.formatBytes32String("new"), deployer.address)).to.be.revertedWith("Vow/not-authorized");
+        it('reverts: Settlement/not-authorized', async function () {
+            await settlement.deny(deployer.address);
+            await expect(settlement.connect(deployer)["file(bytes32,address)"](await ethers.utils.formatBytes32String("new"), deployer.address)).to.be.revertedWith("Settlement/not-authorized");
         });
-        it('reverts: Vow/file-unrecognized-param', async function () {
-            await expect(vow.connect(deployer)["file(bytes32,address)"](await ethers.utils.formatBytes32String("new"), deployer.address)).to.be.revertedWith("Vow/file-unrecognized-param");
+        it('reverts: Settlement/file-unrecognized-param', async function () {
+            await expect(settlement.connect(deployer)["file(bytes32,address)"](await ethers.utils.formatBytes32String("new"), deployer.address)).to.be.revertedWith("Settlement/file-unrecognized-param");
         });
         it('sets multisig', async function () {
-            await vow.connect(deployer)["file(bytes32,address)"](await ethers.utils.formatBytes32String("multisig"), signer1.address);
-            expect(await vow.multisig()).to.be.equal(signer1.address);
+            await settlement.connect(deployer)["file(bytes32,address)"](await ethers.utils.formatBytes32String("multisig"), signer1.address);
+            expect(await settlement.multisig()).to.be.equal(signer1.address);
         });
-        it('sets davosJoin', async function () {
-            await vow.connect(deployer)["file(bytes32,address)"](await ethers.utils.formatBytes32String("davosjoin"), davosJoin.address);
-            expect(await vow.davosJoin()).to.be.equal(davosJoin.address);
+        it('sets stablecoinJoin', async function () {
+            await settlement.connect(deployer)["file(bytes32,address)"](await ethers.utils.formatBytes32String("stablecoinjoin"), stablecoinJoin.address);
+            expect(await settlement.stablecoinJoin()).to.be.equal(stablecoinJoin.address);
         });
-        it('sets davos', async function () {
-            await vow.connect(deployer)["file(bytes32,address)"](await ethers.utils.formatBytes32String("davos"), davos.address);
-            expect(await vow.davos()).to.be.equal(davos.address);
+        it('sets stablecoin', async function () {
+            await settlement.connect(deployer)["file(bytes32,address)"](await ethers.utils.formatBytes32String("stablecoin"), stablecoin.address);
+            expect(await settlement.stablecoin()).to.be.equal(stablecoin.address);
         });
-        it('sets vat', async function () {
-            await vow.connect(deployer)["file(bytes32,address)"](await ethers.utils.formatBytes32String("vat"), vat.address);
-            expect(await vow.vat()).to.be.equal(vat.address);
+        it('sets ledger', async function () {
+            await settlement.connect(deployer)["file(bytes32,address)"](await ethers.utils.formatBytes32String("ledger"), ledger.address);
+            expect(await settlement.ledger()).to.be.equal(ledger.address);
         });
     });
     describe('--- heal()', function () {
-        it('reverts: Vow/insufficient-surplus', async function () {
-            await expect(vow.heal("1" + rad)).to.be.revertedWith("Vow/insufficient-surplus");
+        it('reverts: Settlement/insufficient-surplus', async function () {
+            await expect(settlement.heal("1" + rad)).to.be.revertedWith("Settlement/insufficient-surplus");
         });
-        it('reverts: Vow/insufficient-debt', async function () {
-            await vat.init(collateral);
-            await vat.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("spot"), "100" + ray);
-            await vat.slip(collateral, deployer.address, "1" + wad);
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, vow.address, 0, "15" + wad);
+        it('reverts: Settlement/insufficient-debt', async function () {
+            await ledger.init(collateral);
+            await ledger.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("vision"), "100" + ray);
+            await ledger.slip(collateral, deployer.address, "1" + wad);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, settlement.address, 0, "15" + wad);
 
-            await expect(vow.heal("1" + rad)).to.be.revertedWith("Vow/insufficient-debt");
+            await expect(settlement.heal("1" + rad)).to.be.revertedWith("Settlement/insufficient-debt");
         });
-        it('heals vat contract', async function () {
-            await vat.init(collateral);
-            await vat.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("spot"), "100" + ray);
-            await vat.slip(collateral, deployer.address, "1" + wad);
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, vow.address, 0, "15" + wad);
-            await vat.rely(signer1.address);
-            await vat.connect(signer1).grab(collateral, deployer.address, deployer.address, vow.address, "-1" + wad, "-15" + wad);
-            expect(await vat.sin(vow.address)).to.be.equal("15" + rad);
-            expect(await vat.davos(vow.address)).to.be.equal("15" + rad);
+        it('heals ledger contract', async function () {
+            await ledger.init(collateral);
+            await ledger.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("vision"), "100" + ray);
+            await ledger.slip(collateral, deployer.address, "1" + wad);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, settlement.address, 0, "15" + wad);
+            await ledger.rely(signer1.address);
+            await ledger.connect(signer1).grab(collateral, deployer.address, deployer.address, settlement.address, "-1" + wad, "-15" + wad);
+            expect(await ledger.sin(settlement.address)).to.be.equal("15" + rad);
+            expect(await ledger.stablecoin(settlement.address)).to.be.equal("15" + rad);
 
-            await vow.heal("10" + rad);
-            expect(await vat.sin(vow.address)).to.be.equal("5" + rad);
-            expect(await vat.davos(vow.address)).to.be.equal("5" + rad);
+            await settlement.heal("10" + rad);
+            expect(await ledger.sin(settlement.address)).to.be.equal("5" + rad);
+            expect(await ledger.stablecoin(settlement.address)).to.be.equal("5" + rad);
         });
     });
     describe('--- feed()', function () {
-        it('feeds surplus davos to vow', async function () {
-            await vat.init(collateral);
-            await vat.rely(vow.address);
-            await vat.rely(davosJoin.address);
-            await vat.hope(davosJoin.address);
-            await vat.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("spot"), "100" + ray);
-            await vat.slip(collateral, deployer.address, "1" + wad);
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, 0, "15" + wad);
+        it('feeds surplus stablecoin to settlement', async function () {
+            await ledger.init(collateral);
+            await ledger.rely(settlement.address);
+            await ledger.rely(stablecoinJoin.address);
+            await ledger.hope(stablecoinJoin.address);
+            await ledger.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("vision"), "100" + ray);
+            await ledger.slip(collateral, deployer.address, "1" + wad);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, 0, "15" + wad);
 
-            await vow.connect(deployer)["file(bytes32,address)"](await ethers.utils.formatBytes32String("davos"), davos.address);
-            await davos.connect(deployer).rely(davosJoin.address);
-            await davosJoin.connect(deployer).rely(vow.address);
-            await davosJoin.connect(deployer).exit(deployer.address, "10" + wad);
-            expect(await davos.balanceOf(deployer.address)).to.be.equal("10" + wad);
+            await settlement.connect(deployer)["file(bytes32,address)"](await ethers.utils.formatBytes32String("stablecoin"), stablecoin.address);
+            await stablecoin.connect(deployer).rely(stablecoinJoin.address);
+            await stablecoinJoin.connect(deployer).rely(settlement.address);
+            await stablecoinJoin.connect(deployer).exit(deployer.address, "10" + wad);
+            expect(await stablecoin.balanceOf(deployer.address)).to.be.equal("10" + wad);
 
-            await davos.connect(deployer).approve(vow.address, "10" + wad);
-            await vow.connect(deployer).feed("10" + wad);
-            expect(await vat.davos(vow.address)).to.be.equal("10" + rad);
+            await stablecoin.connect(deployer).approve(settlement.address, "10" + wad);
+            await settlement.connect(deployer).feed("10" + wad);
+            expect(await ledger.stablecoin(settlement.address)).to.be.equal("10" + rad);
         });
     });
     describe('--- flap()', function () {
-        it('reverts: Vow/insufficient-surplus', async function () {
-            await vat.init(collateral);
-            await vat.rely(vow.address);
-            await vat.rely(davosJoin.address);
-            await vat.hope(davosJoin.address);
-            await vat.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("spot"), "100" + ray);
-            await vat.slip(collateral, deployer.address, "1" + wad);
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, 0, "15" + wad);
-            await vat.connect(deployer).move(deployer.address, vow.address, "10" + rad);
-            await vat.rely(signer1.address);
-            await vat.connect(signer1).grab(collateral, deployer.address, deployer.address, vow.address, "-1" + wad, "-15" + wad);
+        it('reverts: Settlement/insufficient-surplus', async function () {
+            await ledger.init(collateral);
+            await ledger.rely(settlement.address);
+            await ledger.rely(stablecoinJoin.address);
+            await ledger.hope(stablecoinJoin.address);
+            await ledger.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("vision"), "100" + ray);
+            await ledger.slip(collateral, deployer.address, "1" + wad);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, 0, "15" + wad);
+            await ledger.connect(deployer).move(deployer.address, settlement.address, "10" + rad);
+            await ledger.rely(signer1.address);
+            await ledger.connect(signer1).grab(collateral, deployer.address, deployer.address, settlement.address, "-1" + wad, "-15" + wad);
 
-            await expect(vow.flap()).to.be.revertedWith("Vow/insufficient-surplus");
+            await expect(settlement.flap()).to.be.revertedWith("Settlement/insufficient-surplus");
         });
-        it('flaps davos to multisig', async function () {
-            await vat.init(collateral);
-            await vat.rely(vow.address);
-            await vat.rely(davosJoin.address);
-            await vat.hope(davosJoin.address);
-            await vat.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
-            await vat.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("spot"), "100" + ray);
-            await vat.slip(collateral, deployer.address, "1" + wad);
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
-            await vat.connect(deployer).frob(collateral, deployer.address, deployer.address, vow.address, 0, "15" + wad);
+        it('flaps stablecoin to multisig', async function () {
+            await ledger.init(collateral);
+            await ledger.rely(settlement.address);
+            await ledger.rely(stablecoinJoin.address);
+            await ledger.hope(stablecoinJoin.address);
+            await ledger.connect(deployer)["file(bytes32,uint256)"](await ethers.utils.formatBytes32String("Line"), "200" + rad);
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("line"), "200" + rad);  
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("dust"), "10" + rad);              
+            await ledger.connect(deployer)["file(bytes32,bytes32,uint256)"](collateral, await ethers.utils.formatBytes32String("vision"), "100" + ray);
+            await ledger.slip(collateral, deployer.address, "1" + wad);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, deployer.address, "1" + wad, 0);
+            await ledger.connect(deployer).frob(collateral, deployer.address, deployer.address, settlement.address, 0, "15" + wad);
             
-            await davosJoin.rely(vow.address);
-            await davos.rely(davosJoin.address);
+            await stablecoinJoin.rely(settlement.address);
+            await stablecoin.rely(stablecoinJoin.address);
 
-            await vow.flap();
-            expect(await davos.balanceOf(deployer.address)).to.be.equal("15" + wad);
+            await settlement.flap();
+            expect(await stablecoin.balanceOf(deployer.address)).to.be.equal("15" + wad);
         });
     });
     describe('--- cage()', function () {
-        it('reverts: Vow/not-live', async function () {
-            await vow.cage();
-            await expect(vow.cage()).to.be.revertedWith("Vow/not-live");
+        it('reverts: Settlement/not-live', async function () {
+            await settlement.cage();
+            await expect(settlement.cage()).to.be.revertedWith("Settlement/not-live");
         });
     });
     describe('--- uncage()', function () {
         it('uncages previouly caged', async function () {
-            await vow.cage();
-            await vow.uncage();
-            await expect(vow.uncage()).to.be.revertedWith("Vow/live");
+            await settlement.cage();
+            await settlement.uncage();
+            await expect(settlement.uncage()).to.be.revertedWith("Settlement/live");
         });
     });
 });
