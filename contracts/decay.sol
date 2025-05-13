@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Modified version of MakerDAO (https://github.com/makerdao/dss/blob/master/src/decay.sol)
+// Modified version of MakerDAO (https://github.com/makerdao/dss/blob/master/src/abaci.sol)
 pragma solidity ^0.8.10;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
